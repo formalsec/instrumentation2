@@ -1,0 +1,4 @@
+(executable
+ (public_name instrumentation2)
+ (name main)
+ (libraries instrumentation2 cmdliner))
