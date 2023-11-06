@@ -1,0 +1,38 @@
+[
+  {
+    "vuln_type" : "command-injection",
+    "source" : "f1",
+    "source_lineno" : 1,
+    "sink" : "eval",
+    "sink_lineno" : 4,
+    "body" : [
+      {
+        "type" : "VariableDeclaration",
+        "declaration" :
+        {
+          "id" : "ret_f1",
+          "init" : {
+            "type" : "CallExpression",
+            "callee" : {
+              "type" : "Identifier",
+              "name" : "f1"
+            },
+            "arguments" : { "a" : "string" }
+          }
+        }
+      },
+      {
+        "type" : "ExpressionStatement",
+        "expression" : {
+          "type" : "CallExpression",
+          "callee" : {
+            "type" : "Identifier",
+            "name" : "f1"
+          },
+          "arguments" : { "b" : "string" }
+        }
+      }
+    ]
+  }
+]
+

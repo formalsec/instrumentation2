@@ -1,2 +1,2 @@
 (test
- (name instrumentation2))
+ (name main))
