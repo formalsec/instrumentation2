@@ -27,7 +27,7 @@
           "type" : "CallExpression",
           "callee" : {
             "type" : "Identifier",
-            "name" : "f1"
+            "name" : "ret_f1"
           },
           "arguments" : { "b" : "string" }
         }

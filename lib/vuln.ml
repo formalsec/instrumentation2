@@ -59,50 +59,10 @@ let pp_vuln_type fmt = function
   | Path_traversal -> Format.fprintf fmt "path-traversal"
   | Proto_pollution -> Format.fprintf fmt "prototype-pollution"
 
-(* let rec pp_param (box : ('a, Format.formatter, unit) format) fmt *)
-(*   ((x, ty) : string * param_type) = *)
-(*   let fprintf = Format.fprintf in *)
-(*   let pp_p fmt ty = *)
-(*     match ty with *)
-(*     | `Any -> fprintf fmt "esl_symbolic.any(\"%s\")" x *)
-(*     | `Number -> fprintf fmt "esl_symbolic.number(\"%s\")" x *)
-(*     | `String -> fprintf fmt "esl_symbolic.string(\"%s\")" x *)
-(*     | `Boolean -> fprintf fmt "esl_symbolic.boolean(\"%s\")" x *)
-(*     | `Function -> fprintf fmt "esl_symbolic.function(\"%s\")" x *)
-(*     | `Object props -> fprintf fmt "{@;@[%a@]@\n}" pp_obj_props props *)
-(*     | `Array arr -> if List.is_empty arr then fprintf fmt "[]" else assert false *)
-(*     | `Union _ -> assert false *)
-(*   in *)
-(*   fprintf fmt box x pp_p ty *)
-
-(* and pp_obj_props fmt props = *)
-(*   Format.pp_print_list *)
-(*     ~pp_sep:(fun fmt () -> Format.fprintf fmt ",@\n") *)
-(*     (pp_param "@[<2>%s: %a@]") fmt props *)
-
-(* let pp_params_as_decl fmt (params : (string * param_type) list) = *)
-(*   Format.pp_print_list *)
-(*     ~pp_sep:(fun fmt () -> Format.fprintf fmt ";@\n") *)
-(*     (pp_param "@[<2>var %s = %a@]") *)
-(*     fmt params *)
-
-(* let pp_params_as_args fmt (args : (string * 'a) list) = *)
-(*   let args = args >>| fst in *)
-(*   Format.pp_print_list *)
-(*     ~pp_sep:(fun fmt () -> Format.pp_print_string fmt ", ") *)
-(*     Format.pp_print_string fmt args *)
-
 let pp fmt (vuln : t) =
-  let fprintf = Format.fprintf in
-  fprintf fmt "@.// Vuln: %a@." pp_vuln_type vuln.ty
-(*   fprintf fmt "%a;@." pp_params_as_decl vuln.params; *)
-(*   match vuln.return with *)
-(*   | None -> fprintf fmt "%s(%a);" vuln.source pp_params_as_args vuln.params *)
-(*   | Some conf -> *)
-(*     let lval = Format.sprintf "ret_%s" vuln.source in *)
-(*     fprintf fmt "var %s = %s(%a);" lval vuln.source pp_params_as_args *)
-(*       vuln.params; *)
-(*     pp fmt { conf with source = lval } *)
+  let open Format in
+  fprintf fmt "@.// Vuln: %a@." pp_vuln_type vuln.ty;
+  pp_print_list ~pp_sep:pp_print_newline Vuln_ast.pp std_formatter vuln.body
 
 module Parser : sig
   val from_file : string -> t list Result.t

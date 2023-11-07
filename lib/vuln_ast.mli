@@ -16,7 +16,7 @@ and arg_type =
 and args = (string * arg_type) list
 
 type t =
-  | Var_decl of string * expr
+  | Var_decl of string * expr option
   | Expr_stmt of expr
 
 val pp : Format.formatter -> t -> unit

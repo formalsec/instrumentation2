@@ -32,7 +32,7 @@ let main debug _file config _output =
   if debug then Logs.set_level (Some Debug);
   let ret =
     let* vulns = Vuln.Parser.from_file config in
-    List.iteri (fun i vuln -> Format.printf "Vuln %d%a" i Vuln.pp vuln) vulns;
+    List.iter (fun vuln -> Format.printf "%a@\n" Vuln.pp vuln) vulns;
     (* let unrolled = vulns >>| Vuln.unroll in *)
     (* let*! test_data = OS.File.read @@ Fpath.v file in *)
     (* List.iteri *)
