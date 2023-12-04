@@ -1,0 +1,5 @@
+(executable
+ (public_name instrumentation2)
+ (name main)
+ (modules main run result vuln vuln_ast)
+ (libraries cmdliner bos bos.setup yojson))
