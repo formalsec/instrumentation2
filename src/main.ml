@@ -1,5 +1,4 @@
 open Cmdliner
-open Instrumentation2
 
 let debug =
   let doc = "debug mode" in
@@ -21,7 +20,7 @@ let cmd =
   let doc = "Instrumentor2" in
   let man =
     [ `S Manpage.s_bugs
-    ; `P "Report them in https://turbina.gsd.inesc-id.pt:8080/tiago/js-cpg"
+    ; `P "Report them in https://github.com/formalsec/instrumentation2/issues"
     ]
   in
   let info = Cmd.info "Instrumentor2" ~version:"%%VERSION%%" ~doc ~man in

@@ -1,4 +1,0 @@
-(library
- (name instrumentation2)
- (modules run result vuln)
- (libraries bos bos.setup yojson memtrace))
