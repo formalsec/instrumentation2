@@ -27,9 +27,6 @@ and vuln_type =
   | Path_traversal
   | Proto_pollution
 
-let ( >>| ) lst f = List.map f lst
-let ( >>= ) lst f = List.concat_map f lst
-
 (** [unroll_params params] performs type unrolling of union types *)
 let rec unroll_params (params : (string * param_type) list) :
   (string * param_type) list list =
