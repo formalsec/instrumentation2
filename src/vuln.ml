@@ -71,7 +71,7 @@ module Fmt = struct
       | `String -> fprintf fmt {|esl_symbolic.string("%s")|} x
       | `Boolean -> fprintf fmt {|esl_symbolic.boolean("%s")|} x
       | `Function -> fprintf fmt {|esl_symbolic.function("%s")|} x
-      | `Object props -> fprintf fmt "@[{@ %a@ }@]" pp_obj_props props
+      | `Object props -> fprintf fmt "@[{ %a@ }@]" pp_obj_props props
       | `Array arr ->
         if List.is_empty arr then fprintf fmt "[]" else assert false
       | `Union _ -> assert false
@@ -80,14 +80,14 @@ module Fmt = struct
 
   and pp_obj_props fmt props =
     pp_print_list
-      ~pp_sep:(fun fmt () -> fprintf fmt ",@\n")
-      (pp_param "%s:@ @[<hov 2>%a@]")
+      ~pp_sep:(fun fmt () -> fprintf fmt "@\n, ")
+      (pp_param "@[<hov 2>%s:@ %a@]")
       fmt props
 
   let pp_params_as_decl fmt (params : (string * param_type) list) =
     pp_print_list
       ~pp_sep:(fun fmt () -> fprintf fmt ";@\n")
-      (pp_param "var %s =@ @[<hov 2>%a@]")
+      (pp_param "@[<hov 2>var %s =@ %a@]")
       fmt params
 
   let pp_params_as_args fmt (args : (string * 'a) list) =
