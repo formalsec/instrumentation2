@@ -1,13 +1,4 @@
-let ( let* ) = Result.bind
-
-let list_map f lst =
-  let exception E of string in
-  try
-    Ok
-      (List.map
-         (fun x -> match f x with Ok x -> x | Error e -> raise (E e))
-         lst )
-  with E e -> Error e
+open Syntax
 
 type vuln_conf =
   { ty : vuln_type
@@ -61,50 +52,58 @@ let rec unroll_params (params : (string * param_type) list) :
 let unroll (vuln : vuln_conf) : vuln_conf list =
   unroll_params vuln.params >>| fun params -> { vuln with params }
 
-let pp_vuln_type fmt = function
-  | Cmd_injection -> Format.fprintf fmt "command-injection"
-  | Code_injection -> Format.fprintf fmt "code-injection"
-  | Path_traversal -> Format.fprintf fmt "path-traversal"
-  | Proto_pollution -> Format.fprintf fmt "prototype-pollution"
+module Fmt = struct
+  open Format
 
-let rec pp_param (box : ('a, Format.formatter, unit) format) fmt
-  ((x, ty) : string * param_type) =
-  let fprintf = Format.fprintf in
-  let pp_p fmt ty =
-    match ty with
-    | `Any -> fprintf fmt "esl_symbolic.any(\"%s\")" x
-    | `Number -> fprintf fmt "esl_symbolic.number(\"%s\")" x
-    | `String -> fprintf fmt "esl_symbolic.string(\"%s\")" x
-    | `Boolean -> fprintf fmt "esl_symbolic.boolean(\"%s\")" x
-    | `Function -> fprintf fmt "esl_symbolic.function(\"%s\")" x
-    | `Object props -> fprintf fmt "{@;@[%a@]@\n}" pp_obj_props props
-    | `Array arr -> if List.is_empty arr then fprintf fmt "[]" else assert false
-    | `Union _ -> assert false
-  in
-  fprintf fmt box x pp_p ty
+  let pp_vuln_type fmt = function
+    | Cmd_injection -> fprintf fmt "command-injection"
+    | Code_injection -> fprintf fmt "code-injection"
+    | Path_traversal -> fprintf fmt "path-traversal"
+    | Proto_pollution -> fprintf fmt "prototype-pollution"
 
-and pp_obj_props fmt props =
-  Format.pp_print_list
-    ~pp_sep:(fun fmt () -> Format.fprintf fmt ",@\n")
-    (pp_param "@[<2>%s: %a@]") fmt props
+  let rec pp_param (box : ('a, formatter, unit) format) fmt
+    ((x, ty) : string * param_type) =
+    let fprintf = Format.fprintf in
+    let pp_p fmt ty =
+      match ty with
+      | `Any -> fprintf fmt {|esl_symbolic.any("%s")|} x
+      | `Number -> fprintf fmt {|esl_symbolic.number("%s")|} x
+      | `String -> fprintf fmt {|esl_symbolic.string("%s")|} x
+      | `Boolean -> fprintf fmt {|esl_symbolic.boolean("%s")|} x
+      | `Function -> fprintf fmt {|esl_symbolic.function("%s")|} x
+      | `Object props -> fprintf fmt "@[{@ %a@ }@]" pp_obj_props props
+      | `Array arr ->
+        if List.is_empty arr then fprintf fmt "[]" else assert false
+      | `Union _ -> assert false
+    in
+    fprintf fmt box x pp_p ty
 
-let pp_params_as_decl fmt (params : (string * param_type) list) =
-  Format.pp_print_list
-    ~pp_sep:(fun fmt () -> Format.fprintf fmt ";@\n")
-    (pp_param "@[<2>var %s = %a@]")
-    fmt params
+  and pp_obj_props fmt props =
+    pp_print_list
+      ~pp_sep:(fun fmt () -> fprintf fmt ",@\n")
+      (pp_param "%s:@ @[<hov 2>%a@]")
+      fmt props
 
-let pp_params_as_args fmt (args : (string * 'a) list) =
-  let args = args >>| fst in
-  Format.pp_print_list
-    ~pp_sep:(fun fmt () -> Format.pp_print_string fmt ", ")
-    Format.pp_print_string fmt args
+  let pp_params_as_decl fmt (params : (string * param_type) list) =
+    pp_print_list
+      ~pp_sep:(fun fmt () -> fprintf fmt ";@\n")
+      (pp_param "var %s =@ @[<hov 2>%a@]")
+      fmt params
 
-let pp fmt (vuln : vuln_conf) =
-  let fprintf = Format.fprintf in
-  fprintf fmt "// Vuln: %a@." pp_vuln_type vuln.ty;
-  fprintf fmt "%a;@." pp_params_as_decl vuln.params;
-  fprintf fmt "%s(%a);" vuln.source pp_params_as_args vuln.params
+  let pp_params_as_args fmt (args : (string * 'a) list) =
+    let args = args >>| fst in
+    pp_print_list
+      ~pp_sep:(fun fmt () -> pp_print_string fmt ", ")
+      pp_print_string fmt args
+
+  let pp fmt (vuln : vuln_conf) =
+    let fprintf = Format.fprintf in
+    fprintf fmt "// Vuln: %a@\n" pp_vuln_type vuln.ty;
+    fprintf fmt "%a;@\n" pp_params_as_decl vuln.params;
+    fprintf fmt "%s(%a);" vuln.source pp_params_as_args vuln.params
+end
+
+let pp = Fmt.pp
 
 module Parser : sig
   val from_file : string -> vuln_conf list Result.t

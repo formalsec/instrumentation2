@@ -1,19 +1,7 @@
 open Bos_setup
+open Syntax
 module Json = Yojson.Basic
 module Util = Yojson.Basic.Util
-
-let ( let*! ) r f = match r with Error (`Msg e) -> failwith e | Ok v -> f v
-let ( let* ) = Result.bind
-let ( >>| ) lst f = List.map f lst
-
-let list_map f lst =
-  let exception E of string in
-  try
-    Ok
-      (List.map
-         (fun x -> match f x with Ok x -> x | Error e -> raise (E e))
-         lst )
-  with E e -> Error e
 
 let logs_on_error ~(use : unit -> 'a) (x : 'a Result.t) =
   match x with
