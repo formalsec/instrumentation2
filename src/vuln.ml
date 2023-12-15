@@ -8,6 +8,7 @@ type vuln_conf =
   ; sink_lineno : int
   ; tainted_params : string list
   ; params : (string * param_type) list
+  ; return : vuln_conf option
   }
 
 and param_type =
@@ -46,8 +47,13 @@ let rec unroll_params (params : (string * param_type) list) :
   in
   loop params [ [] ] >>| List.rev
 
-let unroll (vuln : vuln_conf) : vuln_conf list =
-  unroll_params vuln.params >>| fun params -> { vuln with params }
+let rec unroll (vuln : vuln_conf) : vuln_conf list =
+  let cs = unroll_params vuln.params >>| fun params -> { vuln with params } in
+  match vuln.return with
+  | None -> cs
+  | Some r ->
+    unroll r >>= fun conf ->
+    cs >>| fun c -> { c with return = Some conf }
 
 module Fmt = struct
   open Format
@@ -93,11 +99,17 @@ module Fmt = struct
       ~pp_sep:(fun fmt () -> pp_print_string fmt ", ")
       pp_print_string fmt args
 
-  let pp fmt (vuln : vuln_conf) =
+  let rec pp fmt (vuln : vuln_conf) =
     let fprintf = Format.fprintf in
     fprintf fmt "// Vuln: %a@\n" pp_vuln_type vuln.ty;
     fprintf fmt "%a;@\n" pp_params_as_decl vuln.params;
-    fprintf fmt "%s(%a);" vuln.source pp_params_as_args vuln.params
+    match vuln.return with
+    | None -> fprintf fmt "%s(%a);" vuln.source pp_params_as_args vuln.params
+    | Some r ->
+      let source = asprintf "ret_%s" vuln.source in
+      fprintf fmt "var %s = %s(%a);@\n" source vuln.source pp_params_as_args
+        vuln.params;
+      pp fmt { r with source }
 end
 
 let pp = Fmt.pp
@@ -107,6 +119,7 @@ module Parser : sig
 end = struct
   module Json = Yojson.Basic
   module Util = Yojson.Basic.Util
+  open Format
 
   let parse_vuln_type ?file (ty : Json.t) : vuln_type Result.t =
     match Util.to_string ty with
@@ -116,8 +129,8 @@ end = struct
     | "prototype-pollution" -> Ok Proto_pollution
     | _ ->
       Error
-        (Format.asprintf "%a: unknown type \"%a\""
-           (Format.pp_print_option Format.pp_print_string)
+        (asprintf {|%a: unknown type "%a"|}
+           (pp_print_option pp_print_string)
            file Json.pp ty )
 
   let parse_param_type ?file (ty : string) : param_type =
@@ -132,8 +145,8 @@ end = struct
       (* TODO: lazy-object should be a special type? *)
       `Object []
     | x ->
-      Format.printf "%a: unknown argument type \"%s\"@."
-        (Format.pp_print_option Format.pp_print_string)
+      printf {|%a: unknown argument type "%s"@.|}
+        (pp_print_option pp_print_string)
         file x;
       assert false
 
@@ -149,12 +162,12 @@ end = struct
         assert false )
     | `List array_ -> `Array (array_ >>| parse_param ?file)
     | _ ->
-      Format.printf "%a: unknown param \"%a\""
-        (Format.pp_print_option Format.pp_print_string)
+      printf {|%a: unknown param "%a"|}
+        (pp_print_option pp_print_string)
         file Json.pp param;
       assert false
 
-  let from_json ?file (assoc : Json.t) : vuln_conf Result.t =
+  let rec from_json ?file (assoc : Json.t) : vuln_conf Result.t =
     let* ty = Util.member "vuln_type" assoc |> parse_vuln_type ?file in
     let source = Util.member "source" assoc |> Util.to_string in
     let source_lineno = Util.member "source_lineno" assoc |> Util.to_int in
@@ -163,12 +176,25 @@ end = struct
     let tainted_params =
       Util.member "tainted_params" assoc |> Util.to_list >>| Util.to_string
     in
-
     let params =
       Util.member "params_types" assoc |> Util.to_assoc >>| fun (k, v) ->
       (k, parse_param ?file v)
     in
-    Ok { ty; source; source_lineno; sink; sink_lineno; tainted_params; params }
+    let* return =
+      match Util.member "return" assoc with
+      | `Null -> Ok None
+      | tree -> from_json ?file tree |> Result.map Option.some
+    in
+    Ok
+      { ty
+      ; source
+      ; source_lineno
+      ; sink
+      ; sink_lineno
+      ; tainted_params
+      ; params
+      ; return
+      }
 
   let from_file fname : vuln_conf list Result.t =
     let json = Json.from_file ~fname fname in
