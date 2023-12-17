@@ -24,7 +24,7 @@ let main debug file config _output =
             Format.printf "Genrating %a@." Fpath.pp path;
             let*! () =
               OS.File.writef path
-                {|%s@\nconst esl_symbolic = require("esl_symbolic");@\n%a|}
+                "%s@\nconst esl_symbolic = require('esl_symbolic');@\n%a"
                 test_data Vuln.pp vuln
             in
             () )

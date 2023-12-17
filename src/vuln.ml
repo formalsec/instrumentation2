@@ -64,10 +64,17 @@ module Fmt = struct
     | Path_traversal -> fprintf fmt "path-traversal"
     | Proto_pollution -> fprintf fmt "prototype-pollution"
 
+  let array_iter x f arr =
+    List.iteri (fun i v -> f (x ^ string_of_int i, v)) arr
+
+  let pp_array iter pp_v fmt v =
+    pp_print_iter
+      ~pp_sep:(fun fmt () -> pp_print_string fmt ", ")
+      iter pp_v fmt v
+
   let rec pp_param (box : ('a, formatter, unit) format) fmt
     ((x, ty) : string * param_type) =
-    let fprintf = Format.fprintf in
-    let pp_p fmt ty =
+    let rec pp_p fmt (x, ty) =
       match ty with
       | `Any -> fprintf fmt {|esl_symbolic.any("%s")|} x
       | `Number -> fprintf fmt {|esl_symbolic.number("%s")|} x
@@ -75,11 +82,10 @@ module Fmt = struct
       | `Boolean -> fprintf fmt {|esl_symbolic.boolean("%s")|} x
       | `Function -> fprintf fmt {|esl_symbolic.function("%s")|} x
       | `Object props -> fprintf fmt "@[{ %a@ }@]" pp_obj_props props
-      | `Array arr ->
-        if List.is_empty arr then fprintf fmt "[]" else assert false
+      | `Array arr -> fprintf fmt "[ %a ]" (pp_array (array_iter x) pp_p) arr
       | `Union _ -> assert false
     in
-    fprintf fmt box x pp_p ty
+    fprintf fmt box x pp_p (x, ty)
 
   and pp_obj_props fmt props =
     pp_print_list
@@ -140,7 +146,7 @@ end = struct
     | "string" -> `String
     | "bool" | "boolean" -> `Boolean
     | "function" -> `Function
-    | "array" -> `Array []
+    | "array" -> `Array [ `String ]
     | "object" | "lazy-object" ->
       (* TODO: lazy-object should be a special type? *)
       `Object []
