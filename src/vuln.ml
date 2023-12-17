@@ -105,6 +105,8 @@ module Fmt = struct
       ~pp_sep:(fun fmt () -> pp_print_string fmt ", ")
       pp_print_string fmt args
 
+  let normalize = String.map (fun c -> match c with '.' -> '_' | _ -> c)
+
   let rec pp fmt (vuln : vuln_conf) =
     let fprintf = Format.fprintf in
     fprintf fmt "// Vuln: %a@\n" pp_vuln_type vuln.ty;
@@ -112,7 +114,7 @@ module Fmt = struct
     match vuln.return with
     | None -> fprintf fmt "%s(%a);" vuln.source pp_params_as_args vuln.params
     | Some r ->
-      let source = asprintf "ret_%s" vuln.source in
+      let source = asprintf "ret_%s" (normalize vuln.source) in
       fprintf fmt "var %s = %s(%a);@\n" source vuln.source pp_params_as_args
         vuln.params;
       pp fmt { r with source }
