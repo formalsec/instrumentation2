@@ -17,6 +17,7 @@ and param_type =
   | `String
   | `Boolean
   | `Function
+  | `Lazy_object
   | `Array of param_type list
   | `Object of (string * param_type) list
   | `Union of param_type list (* | `Concrete *)
@@ -81,6 +82,7 @@ module Fmt = struct
       | `String -> fprintf fmt {|esl_symbolic.string("%s")|} x
       | `Boolean -> fprintf fmt {|esl_symbolic.boolean("%s")|} x
       | `Function -> fprintf fmt {|esl_symbolic.function("%s")|} x
+      | `Lazy_object -> fprintf fmt {|esl_symbolic.lazy_object()|}
       | `Object props -> fprintf fmt "@[{ %a@ }@]" pp_obj_props props
       | `Array arr -> fprintf fmt "[ %a ]" (pp_array (array_iter x) pp_p) arr
       | `Union _ -> assert false
@@ -149,9 +151,8 @@ end = struct
     | "bool" | "boolean" -> `Boolean
     | "function" -> `Function
     | "array" -> `Array [ `String ]
-    | "object" | "lazy-object" ->
-      (* TODO: lazy-object should be a special type? *)
-      `Object []
+    | "object" -> `Object []
+    | "lazy_object" -> `Lazy_object
     | x ->
       printf {|%a: unknown argument type "%s"@.|}
         (pp_print_option pp_print_string)
