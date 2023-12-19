@@ -116,7 +116,7 @@ module Fmt = struct
   and pp_params_as_decl fmt (params : (string * param_type) list) =
     pp_print_list
       ~pp_sep:(fun fmt () -> fprintf fmt ";@\n")
-      (pp_param "@[<hov 2>var %s =@ %a@]")
+      (pp_param "@[<hov 2>let %s =@ %a@]")
       fmt params
 
   let pp_params_as_args fmt (args : (string * 'a) list) =
