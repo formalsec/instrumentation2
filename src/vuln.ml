@@ -20,6 +20,7 @@ and param_type =
   | `Lazy_object
   | `Array of param_type list
   | `Object of (string * param_type) list
+  | `Object2 of (param_type * param_type) list
   | `Union of param_type list (* | `Concrete *)
   ]
 
@@ -28,6 +29,12 @@ and vuln_type =
   | Code_injection
   | Path_traversal
   | Proto_pollution
+
+let fresh_str =
+  let id = ref 0 in
+  fun () ->
+    incr id;
+    Format.sprintf "x_%d" !id
 
 (** [unroll_params params] performs type unrolling of union types *)
 let rec unroll_params (params : (string * param_type) list) :
@@ -85,6 +92,17 @@ module Fmt = struct
       | `Lazy_object -> fprintf fmt {|esl_symbolic.lazy_object()|}
       | `Object props -> fprintf fmt "@[{ %a@ }@]" pp_obj_props props
       | `Array arr -> fprintf fmt "[ %a ]" (pp_array (array_iter x) pp_p) arr
+      | `Object2 props ->
+        fprintf fmt "{};@.";
+        fprintf fmt "%a"
+          (pp_print_list
+             ~pp_sep:(fun fmt () -> fprintf fmt ";@\n")
+             (fun fmt (t1, t2) ->
+               let x1 = fresh_str () in
+               let x2 = fresh_str () in
+               fprintf fmt "%a;@\n" pp_params_as_decl [ (x1, t1); (x2, t2) ];
+               fprintf fmt "%s[%s] = %s" x x1 x2 ) )
+          props
       | `Union _ -> assert false
     in
     fprintf fmt box x pp_p (x, ty)
@@ -95,7 +113,7 @@ module Fmt = struct
       (pp_param "@[<hov 2>%s:@ %a@]")
       fmt props
 
-  let pp_params_as_decl fmt (params : (string * param_type) list) =
+  and pp_params_as_decl fmt (params : (string * param_type) list) =
     pp_print_list
       ~pp_sep:(fun fmt () -> fprintf fmt ";@\n")
       (pp_param "@[<hov 2>var %s =@ %a@]")
@@ -152,6 +170,11 @@ end = struct
     | "function" -> `Function
     | "array" -> `Array [ `String ]
     | "object" -> `Object []
+    | "object1" -> `Object2 [ (`String, `String) ]
+    | "object2" -> `Object2 [ (`String, `Object2 [ (`String, `String) ]) ]
+    | "object3" ->
+      `Object2
+        [ (`String, `Object2 [ (`String, `Object2 [ (`String, `String) ]) ]) ]
     | "lazy_object" -> `Lazy_object
     | x ->
       printf {|%a: unknown argument type "%s"@.|}
