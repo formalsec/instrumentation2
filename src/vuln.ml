@@ -18,9 +18,9 @@ and param_type =
   | `Boolean
   | `Function
   | `Lazy_object
+  | `Polluted_object
   | `Array of param_type list
   | `Object of (string * param_type) list
-  | `Object2 of (param_type * param_type) list
   | `Union of param_type list (* | `Concrete *)
   ]
 
@@ -75,10 +75,16 @@ module Fmt = struct
   let array_iter x f arr =
     List.iteri (fun i v -> f (x ^ string_of_int i, v)) arr
 
-  let pp_array iter pp_v fmt v =
-    pp_print_iter
-      ~pp_sep:(fun fmt () -> pp_print_string fmt ", ")
-      iter pp_v fmt v
+  let pp_iter ~pp_sep iter pp_v fmt v =
+    let is_first = ref true in
+    let pp_v v =
+      if !is_first then is_first := false else pp_sep fmt ();
+      pp_v fmt v
+    in
+    iter pp_v v
+
+  let pp_array (iter : ('a -> unit) -> 'b -> unit) pp_v fmt v =
+    pp_iter ~pp_sep:(fun fmt () -> pp_print_string fmt ", ") iter pp_v fmt v
 
   let rec pp_param (box : ('a, formatter, unit) format) fmt
     ((x, ty) : string * param_type) =
@@ -89,20 +95,10 @@ module Fmt = struct
       | `String -> fprintf fmt {|esl_symbolic.string("%s")|} x
       | `Boolean -> fprintf fmt {|esl_symbolic.boolean("%s")|} x
       | `Function -> fprintf fmt {|esl_symbolic.function("%s")|} x
-      | `Lazy_object -> fprintf fmt {|esl_symbolic.lazy_object()|}
+      | `Lazy_object -> fprintf fmt "esl_symbolic.lazy_object()"
+      | `Polluted_object -> fprintf fmt "esl_symbolic.polluted_object()"
       | `Object props -> fprintf fmt "@[{ %a@ }@]" pp_obj_props props
       | `Array arr -> fprintf fmt "[ %a ]" (pp_array (array_iter x) pp_p) arr
-      | `Object2 props ->
-        fprintf fmt "{};@.";
-        fprintf fmt "%a"
-          (pp_print_list
-             ~pp_sep:(fun fmt () -> fprintf fmt ";@\n")
-             (fun fmt (t1, t2) ->
-               let x1 = fresh_str () in
-               let x2 = fresh_str () in
-               fprintf fmt "%a;@\n" pp_params_as_decl [ (x1, t1); (x2, t2) ];
-               fprintf fmt "%s[%s] = %s" x x1 x2 ) )
-          props
       | `Union _ -> assert false
     in
     fprintf fmt box x pp_p (x, ty)
@@ -170,11 +166,7 @@ end = struct
     | "function" -> `Function
     | "array" -> `Array [ `String ]
     | "object" -> `Object []
-    | "object1" -> `Object2 [ (`String, `String) ]
-    | "object2" -> `Object2 [ (`String, `Object2 [ (`String, `String) ]) ]
-    | "object3" ->
-      `Object2
-        [ (`String, `Object2 [ (`String, `Object2 [ (`String, `String) ]) ]) ]
+    | "polluted_object" -> `Polluted_object
     | "lazy_object" -> `Lazy_object
     | x ->
       printf {|%a: unknown argument type "%s"@.|}
