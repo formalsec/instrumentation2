@@ -1,0 +1,32 @@
+[
+    {
+        "vuln_type": "command-injection",
+        "source": "compare",
+        "source_lineno": 5,
+        "sink": "exec",
+        "sink_lineno": 143,
+        "tainted_params": [
+            "orig",
+            "compareTo",
+            "options",
+            "cb"
+        ],
+        "params_types": {
+            "orig": "any",
+            "compareTo": "any",
+            "options": {
+                "file": "string",
+                "highlightColor": {
+                  "_union" : [
+                    "array",
+                    "number",
+                    "string"
+                  ]
+                },
+                "highlightStyle": "string",
+                "tolerance": "number"
+            },
+            "cb": "function"
+        }
+    }
+]
