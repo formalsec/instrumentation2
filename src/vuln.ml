@@ -3,9 +3,9 @@ open Syntax
 type vuln_conf =
   { ty : vuln_type
   ; source : string
-  ; source_lineno : int
+  ; source_lineno : int option
   ; sink : string
-  ; sink_lineno : int
+  ; sink_lineno : int option
   ; tainted_params : string list
   ; params : (string * param_type) list
   ; return : vuln_conf option
@@ -194,9 +194,11 @@ end = struct
   let rec from_json ?file (assoc : Json.t) : vuln_conf Result.t =
     let* ty = Util.member "vuln_type" assoc |> parse_vuln_type ?file in
     let source = Util.member "source" assoc |> Util.to_string in
-    let source_lineno = Util.member "source_lineno" assoc |> Util.to_int in
+    let source_lineno =
+      Util.(member "source_lineno" assoc |> to_option to_int)
+    in
     let sink = Util.member "sink" assoc |> Util.to_string in
-    let sink_lineno = Util.member "sink_lineno" assoc |> Util.to_int in
+    let sink_lineno = Util.(member "sink_lineno" assoc |> to_option to_int) in
     let tainted_params =
       Util.member "tainted_params" assoc |> Util.to_list >>| Util.to_string
     in

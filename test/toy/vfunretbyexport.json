@@ -2,17 +2,13 @@
   {
     "vuln_type" : "code-injection",
     "source" : "f1",
-    "source_lineno" : 1,
     "sink" : "anon",
-    "sink_lineno" : 2,
     "tainted_params" : [ "a" ],
     "params_types" : { "a" : "string" },
     "return" : {
       "vuln_type" : "code-injection",
-      "source" : "f2",
-      "source_lineno" : 2,
+      "source" : "",
       "sink" : "eval",
-      "sink_lineno" : 4,
       "tainted_params" : [ "b" ],
       "params_types" : { "b" : "number" }
     }
