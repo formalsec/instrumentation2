@@ -1,4 +1,4 @@
-open Syntax
+open Syntax.List
 
 type vuln_conf =
   { ty : vuln_type
@@ -12,17 +12,16 @@ type vuln_conf =
   }
 
 and param_type =
-  [ `Any
-  | `Number
-  | `String
-  | `Boolean
-  | `Function
-  | `Lazy_object
-  | `Polluted_object
-  | `Array of param_type list
-  | `Object of (string * param_type) list
-  | `Union of param_type list (* | `Concrete *)
-  ]
+  | Any
+  | Number
+  | String
+  | Boolean
+  | Function
+  | Lazy_object
+  | Polluted_object of int
+  | Array of param_type list
+  | Object of (string * param_type) list
+  | Union of param_type list (* | `Concrete *)
 
 and vuln_type =
   | Cmd_injection
@@ -45,10 +44,9 @@ let rec unroll_params (params : (string * param_type) list) :
     | ((x, ty) as param) :: wl' ->
       let acc' =
         match ty with
-        | `Object prps ->
-          unroll_params prps >>= fun prps' ->
-          acc >>| List.cons (x, `Object prps')
-        | `Union tys -> tys >>= fun ty -> acc >>| List.cons (x, ty)
+        | Object prps ->
+          unroll_params prps >>= fun prps' -> acc >>| List.cons (x, Object prps')
+        | Union tys -> tys >>= fun ty -> acc >>| List.cons (x, ty)
         | _ -> acc >>| List.cons param
       in
       loop wl' acc'
@@ -90,16 +88,17 @@ module Fmt = struct
     ((x, ty) : string * param_type) =
     let rec pp_p fmt (x, ty) =
       match ty with
-      | `Any -> fprintf fmt {|esl_symbolic.any("%s")|} x
-      | `Number -> fprintf fmt {|esl_symbolic.number("%s")|} x
-      | `String -> fprintf fmt {|esl_symbolic.string("%s")|} x
-      | `Boolean -> fprintf fmt {|esl_symbolic.boolean("%s")|} x
-      | `Function -> fprintf fmt {|esl_symbolic.function("%s")|} x
-      | `Lazy_object -> fprintf fmt "esl_symbolic.lazy_object()"
-      | `Polluted_object -> fprintf fmt "esl_symbolic.polluted_object()"
-      | `Object props -> fprintf fmt "@[{ %a@ }@]" pp_obj_props props
-      | `Array arr -> fprintf fmt "[ %a ]" (pp_array (array_iter x) pp_p) arr
-      | `Union _ -> assert false
+      | Any -> fprintf fmt {|esl_symbolic.any("%s")|} x
+      | Number -> fprintf fmt {|esl_symbolic.number("%s")|} x
+      | String -> fprintf fmt {|esl_symbolic.string("%s")|} x
+      | Boolean -> fprintf fmt {|esl_symbolic.boolean("%s")|} x
+      | Function -> fprintf fmt {|esl_symbolic.function("%s")|} x
+      | Lazy_object -> fprintf fmt "esl_symbolic.lazy_object()"
+      | Polluted_object n ->
+        fprintf fmt "esl_symbolic.polluted_object(depth=%d)" n
+      | Object props -> fprintf fmt "@[{ %a@ }@]" pp_obj_props props
+      | Array arr -> fprintf fmt "[ %a ]" (pp_array (array_iter x) pp_p) arr
+      | Union _ -> assert false
     in
     fprintf fmt box x pp_p (x, ty)
 
@@ -144,6 +143,7 @@ end = struct
   module Json = Yojson.Basic
   module Util = Yojson.Basic.Util
   open Format
+  open Syntax.Result
 
   let parse_vuln_type ?file (ty : Json.t) : vuln_type Result.t =
     match Util.to_string ty with
@@ -159,15 +159,16 @@ end = struct
 
   let parse_param_type ?file (ty : string) : param_type =
     match String.trim ty with
-    | "any" -> `Any
-    | "number" -> `Number
-    | "string" -> `String
-    | "bool" | "boolean" -> `Boolean
-    | "function" -> `Function
-    | "array" -> `Array [ `String ]
-    | "object" -> `Object []
-    | "polluted_object" -> `Polluted_object
-    | "lazy_object" -> `Lazy_object
+    | "any" -> Any
+    | "number" -> Number
+    | "string" -> String
+    | "bool" | "boolean" -> Boolean
+    | "function" -> Function
+    | "array" -> Array [ String ]
+    | "object" -> Object []
+    | "polluted_object2" -> Polluted_object 2
+    | "polluted_object3" -> Polluted_object 3
+    | "lazy_object" -> Lazy_object
     | x ->
       printf {|%a: unknown argument type "%s"@.|}
         (pp_print_option pp_print_string)
@@ -179,12 +180,12 @@ end = struct
     | `String ty -> parse_param_type ?file ty
     | `Assoc obj as assoc -> (
       match Util.member "_union" assoc with
-      | `Null -> `Object (obj >>| fun (k, v) -> (k, parse_param ?file v))
-      | `List tys -> `Union (tys >>| parse_param ?file)
+      | `Null -> Object (obj >>| fun (k, v) -> (k, parse_param ?file v))
+      | `List tys -> Union (tys >>| parse_param ?file)
       | _ ->
         (* should not happen *)
         assert false )
-    | `List array_ -> `Array (array_ >>| parse_param ?file)
+    | `List array_ -> Array (array_ >>| parse_param ?file)
     | _ ->
       printf {|%a: unknown param "%a"|}
         (pp_print_option pp_print_string)

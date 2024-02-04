@@ -1,5 +1,6 @@
 open Bos_setup
-open Syntax
+open Syntax.List
+open Syntax.Result
 module Json = Yojson.Basic
 module Util = Yojson.Basic.Util
 
