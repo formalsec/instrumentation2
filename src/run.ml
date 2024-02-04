@@ -10,14 +10,16 @@ let logs_on_error ~(use : unit -> 'a) (x : 'a Result.t) =
     Logs.err (fun m -> m "%s" e);
     use ()
 
+let esl_sym = {|let esl_symbolic = require("esl_symbolic")|}
+let seal_prop = {|esl_symbolic.sealProperties(Object.prototype)|}
+
 let write_test ~file module_data vuln =
   OS.File.with_oc file
     (fun oc (data, vuln) ->
       Format.eprintf "Genrating %a@." Fpath.pp file;
-      Ok
-        (Format.kasprintf (output_string oc)
-           "%s@\nconst esl_symbolic = require('esl_symbolic');@\n%a@." data
-           Vuln.pp vuln ) )
+      Format.kasprintf (output_string oc) "%s@\n%s;@\n%s;@\n%a@." data esl_sym
+        seal_prop Vuln.pp vuln;
+      Ok () )
     (module_data, vuln)
 
 let main debug file config output =
@@ -35,7 +37,8 @@ let main debug file config output =
               | "-" -> Fpath.v "-"
               | _ -> Format.ksprintf Fpath.v "%s_%d_%d.js" output i j
             in
-            let*! _ = write_test ~file module_data vuln in ())
+            let*! _ = write_test ~file module_data vuln in
+            () )
           lst )
       unrolled;
     Format.eprintf "All OK!";

@@ -9,7 +9,8 @@ Test VFunRetByExport:
     };
   };
   
-  const esl_symbolic = require('esl_symbolic');
+  let esl_symbolic = require("esl_symbolic");
+  esl_symbolic.sealProperties(Object.prototype);
   // Vuln: code-injection
   let a = esl_symbolic.string("a");
   var ret_f1 = f1(a);
