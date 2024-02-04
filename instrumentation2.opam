@@ -4,7 +4,7 @@ synopsis: "A short synopsis"
 description: "A longer description"
 maintainer: ["Maintainer Name"]
 authors: ["Author Name"]
-license: "LICENSE"
+license: "GPL-3.0-only"
 tags: ["topics" "to describe" "your" "project"]
 homepage: "https://github.com/username/reponame"
 doc: "https://url/to/documentation"
@@ -12,9 +12,9 @@ bug-reports: "https://github.com/username/reponame/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.11"}
-  "cmdliner"
-  "yojson"
-  "bos"
+  "cmdliner" {>= "1.2.0"}
+  "yojson" {>= "2.1.2"}
+  "bos" {>= "0.2.1"}
   "odoc" {with-doc}
 ]
 build: [

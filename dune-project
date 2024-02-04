@@ -11,7 +11,7 @@
 
 (maintainers "Maintainer Name")
 
-(license LICENSE)
+(license GPL-3.0-only)
 
 (documentation https://url/to/documentation)
 
@@ -19,6 +19,11 @@
  (name instrumentation2)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml dune cmdliner yojson bos)
+ (depends
+  ocaml
+  dune
+  (cmdliner (>= 1.2.0))
+  (yojson (>= 2.1.2))
+  (bos (>= 0.2.1)))
  (tags
   (topics "to describe" your project)))
