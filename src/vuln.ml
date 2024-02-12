@@ -95,7 +95,7 @@ module Fmt = struct
       | Function -> fprintf fmt {|esl_symbolic.function("%s")|} x
       | Lazy_object -> fprintf fmt "esl_symbolic.lazy_object()"
       | Polluted_object n ->
-        fprintf fmt "esl_symbolic.polluted_object(depth=%d)" n
+        fprintf fmt "esl_symbolic.polluted_object(%d)" n
       | Object props -> fprintf fmt "@[{ %a@ }@]" pp_obj_props props
       | Array arr -> fprintf fmt "[ %a ]" (pp_array (array_iter x) pp_p) arr
       | Union _ -> assert false
