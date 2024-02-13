@@ -14,7 +14,6 @@ Test VFunRetByExport:
   // Vuln: code-injection
   let a = esl_symbolic.string("a");
   var ret_f1 = f1(a);
-  // Vuln: code-injection
   let b = esl_symbolic.number("b");
   ret_f1(b);
   All OK!
