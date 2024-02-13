@@ -94,8 +94,7 @@ module Fmt = struct
       | Boolean -> fprintf fmt {|esl_symbolic.boolean("%s")|} x
       | Function -> fprintf fmt {|esl_symbolic.function("%s")|} x
       | Lazy_object -> fprintf fmt "esl_symbolic.lazy_object()"
-      | Polluted_object n ->
-        fprintf fmt "esl_symbolic.polluted_object(%d)" n
+      | Polluted_object n -> fprintf fmt "esl_symbolic.polluted_object(%d)" n
       | Object props -> fprintf fmt "@[{ %a@ }@]" pp_obj_props props
       | Array arr -> fprintf fmt "[ %a ]" (pp_array (array_iter x) pp_p) arr
       | Union _ -> assert false
@@ -122,17 +121,22 @@ module Fmt = struct
 
   let normalize = String.map (fun c -> match c with '.' | ' ' -> '_' | _ -> c)
 
-  let rec pp fmt (vuln : vuln_conf) =
-    let fprintf = Format.fprintf in
+  let pp fmt (vuln : vuln_conf) =
     fprintf fmt "// Vuln: %a@\n" pp_vuln_type vuln.ty;
-    fprintf fmt "%a;@\n" pp_params_as_decl vuln.params;
-    match vuln.return with
-    | None -> fprintf fmt "%s(%a);" vuln.source pp_params_as_args vuln.params
-    | Some r ->
-      let source = asprintf "ret_%s" (normalize vuln.source) in
-      fprintf fmt "var %s = %s(%a);@\n" source vuln.source pp_params_as_args
-        vuln.params;
-      pp fmt { r with source = asprintf "%s%s" source r.source }
+    let rec aux fmt vuln =
+      fprintf fmt "%a;@\n" pp_params_as_decl vuln.params;
+      match vuln.return with
+      | None -> fprintf fmt "%s(%a);" vuln.source pp_params_as_args vuln.params
+      | Some r ->
+        let source = asprintf "ret_%s" (normalize vuln.source) in
+        fprintf fmt "var %s = %s(%a);@\n" source vuln.source pp_params_as_args
+          vuln.params;
+        aux fmt { r with source = asprintf "%s%s" source r.source }
+    in
+    aux fmt vuln;
+    match vuln.ty with
+    | Proto_pollution -> fprintf fmt "@\nconsole.log(({}).toString);"
+    | _ -> ()
 end
 
 let pp = Fmt.pp
