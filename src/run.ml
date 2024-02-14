@@ -42,7 +42,7 @@ let main debug file config output =
             () )
           lst )
       unrolled;
-    Format.eprintf "All OK!";
+    Format.eprintf "All OK!@.";
     Ok 0
   in
   logs_on_error ~use:(fun () -> 1) ret
