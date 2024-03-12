@@ -1,7 +1,6 @@
 Test VFunRetByExport:
   $ instrumentation2 vfunretbyexport.js vfunretbyexport.json -o -
   Genrating -
-  All OK!
   function f1(a) {
     return function f2(b) {
       if (b > 0) {
