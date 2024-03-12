@@ -1,3 +1,25 @@
+type vuln_type =
+  | Cmd_injection
+  | Code_injection
+  | Path_traversal
+  | Proto_pollution
+
+type param_type =
+  | Any
+  | Number
+  | String
+  | Boolean
+  | Function
+  | Array of param_type list
+  | Object of object_type
+  | Union of param_type list (* | `Concrete *)
+
+and object_type =
+  [ `Lazy
+  | `Polluted of int
+  | `Normal of (string * param_type) list
+  ]
+
 type vuln_conf =
   { ty : vuln_type
   ; source : string
@@ -6,26 +28,10 @@ type vuln_conf =
   ; sink_lineno : int option
   ; tainted_params : string list
   ; params : (string * param_type) list
-  ; return : vuln_conf option
+  ; cont : cont option
   }
 
-and param_type =
-  | Any
-  | Number
-  | String
-  | Boolean
-  | Function
-  | Lazy_object
-  | Polluted_object of int
-  | Array of param_type list
-  | Object of (string * param_type) list
-  | Union of param_type list (* | `Concrete *)
-
-and vuln_type =
-  | Cmd_injection
-  | Code_injection
-  | Path_traversal
-  | Proto_pollution
+and cont = Return of vuln_conf
 
 let fresh_str =
   let id = ref 0 in
@@ -43,9 +49,9 @@ let rec unroll_params (params : (string * param_type) list) :
     | ((x, ty) as param) :: wl' ->
       let acc' =
         match ty with
-        | Object prps ->
+        | Object (`Normal prps) ->
           let* prps' = unroll_params prps in
-          List.map (List.cons (x, Object prps')) acc
+          List.map (List.cons (x, Object (`Normal prps'))) acc
         | Union tys ->
           let* ty = tys in
           List.map (List.cons (x, ty)) acc
@@ -60,12 +66,12 @@ let rec unroll (vuln : vuln_conf) : vuln_conf list =
   let cs =
     List.map (fun params -> { vuln with params }) (unroll_params vuln.params)
   in
-  match vuln.return with
+  match vuln.cont with
   | None -> cs
-  | Some r ->
+  | Some (Return r) ->
     let* conf = unroll r in
     let+ c = cs in
-    { c with return = Some conf }
+    { c with cont = Some (Return conf) }
 
 module Fmt = struct
   open Format
@@ -99,9 +105,9 @@ module Fmt = struct
       | String -> fprintf fmt {|esl_symbolic.string("%s")|} x
       | Boolean -> fprintf fmt {|esl_symbolic.boolean("%s")|} x
       | Function -> fprintf fmt {|esl_symbolic.function("%s")|} x
-      | Lazy_object -> fprintf fmt "esl_symbolic.lazy_object()"
-      | Polluted_object n -> fprintf fmt "esl_symbolic.polluted_object(%d)" n
-      | Object props -> fprintf fmt "@[{ %a@ }@]" pp_obj_props props
+      | Object `Lazy -> fprintf fmt "esl_symbolic.lazy_object()"
+      | Object (`Polluted n) -> fprintf fmt "esl_symbolic.polluted_object(%d)" n
+      | Object (`Normal props) -> fprintf fmt "@[{ %a@ }@]" pp_obj_props props
       | Array arr -> fprintf fmt "[ %a ]" (pp_array (array_iter x) pp_p) arr
       | Union _ -> assert false
     in
@@ -131,9 +137,9 @@ module Fmt = struct
     fprintf fmt "// Vuln: %a@\n" pp_vuln_type vuln.ty;
     let rec aux fmt vuln =
       fprintf fmt "%a;@\n" pp_params_as_decl vuln.params;
-      match vuln.return with
+      match vuln.cont with
       | None -> fprintf fmt "%s(%a);" vuln.source pp_params_as_args vuln.params
-      | Some r ->
+      | Some (Return r) ->
         let source = asprintf "ret_%s" (normalize vuln.source) in
         fprintf fmt "var %s = %s(%a);@\n" source vuln.source pp_params_as_args
           vuln.params;
@@ -176,10 +182,10 @@ end = struct
     | "bool" | "boolean" -> Boolean
     | "function" -> Function
     | "array" -> Array [ String ]
-    | "object" -> Object []
-    | "polluted_object2" -> Polluted_object 2
-    | "polluted_object3" -> Polluted_object 3
-    | "lazy_object" -> Lazy_object
+    | "object" -> Object (`Normal [])
+    | "polluted_object2" -> Object (`Polluted 2)
+    | "polluted_object3" -> Object (`Polluted 3)
+    | "lazy_object" -> Object `Lazy
     | x ->
       printf {|%a: unknown argument type "%s"@.|}
         (pp_print_option pp_print_string)
@@ -191,7 +197,9 @@ end = struct
     | `String ty -> parse_param_type ?file ty
     | `Assoc obj as assoc -> (
       match Util.member "_union" assoc with
-      | `Null -> Object (List.map (fun (k, v) -> (k, parse_param ?file v)) obj)
+      | `Null ->
+        let params = List.map (fun (k, v) -> (k, parse_param ?file v)) obj in
+        Object (`Normal params)
       | `List tys -> Union (List.map (parse_param ?file) tys)
       | _ ->
         (* should not happen *)
@@ -220,12 +228,12 @@ end = struct
       |> Util.to_assoc
       |> List.map (fun (k, v) -> (k, parse_param ?file v))
     in
-    let* return =
+    let* cont =
       match Util.member "return" assoc with
       | `Null -> Ok None
       | tree ->
-        let* tree = from_json ?file tree in
-        Ok (Some tree)
+        let+ tree = from_json ?file tree in
+        Some (Return tree)
     in
     Ok
       { ty
@@ -235,7 +243,7 @@ end = struct
       ; sink_lineno
       ; tainted_params
       ; params
-      ; return
+      ; cont
       }
 
   let from_file fname =
