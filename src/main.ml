@@ -23,7 +23,7 @@ let cmd =
     ; `P "Report them in https://github.com/formalsec/instrumentation2/issues"
     ]
   in
-  let info = Cmd.info "Instrumentor2" ~version:"%%VERSION%%" ~doc ~man in
+  let info = Cmd.info "instrumentation2" ~version:"%%VERSION%%" ~doc ~man in
   Cmd.v info Term.(const Run.main $ debug $ file $ config $ output)
 
 let () = exit @@ Cmd.eval' cmd

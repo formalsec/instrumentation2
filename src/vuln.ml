@@ -1,5 +1,3 @@
-open Syntax.List
-
 type vuln_conf =
   { ty : vuln_type
   ; source : string
@@ -38,6 +36,7 @@ let fresh_str =
 (** [unroll_params params] performs type unrolling of union types *)
 let rec unroll_params (params : (string * param_type) list) :
   (string * param_type) list list =
+  let open Syntax.List in
   let rec loop wl acc =
     match wl with
     | [] -> acc
@@ -45,21 +44,28 @@ let rec unroll_params (params : (string * param_type) list) :
       let acc' =
         match ty with
         | Object prps ->
-          unroll_params prps >>= fun prps' -> acc >>| List.cons (x, Object prps')
-        | Union tys -> tys >>= fun ty -> acc >>| List.cons (x, ty)
-        | _ -> acc >>| List.cons param
+          let* prps' = unroll_params prps in
+          List.map (List.cons (x, Object prps')) acc
+        | Union tys ->
+          let* ty = tys in
+          List.map (List.cons (x, ty)) acc
+        | _ -> List.map (List.cons param) acc
       in
       loop wl' acc'
   in
-  loop params [ [] ] >>| List.rev
+  List.map List.rev (loop params [ [] ])
 
 let rec unroll (vuln : vuln_conf) : vuln_conf list =
-  let cs = unroll_params vuln.params >>| fun params -> { vuln with params } in
+  let open Syntax.List in
+  let cs =
+    List.map (fun params -> { vuln with params }) (unroll_params vuln.params)
+  in
   match vuln.return with
   | None -> cs
   | Some r ->
-    unroll r >>= fun conf ->
-    cs >>| fun c -> { c with return = Some conf }
+    let* conf = unroll r in
+    let+ c = cs in
+    { c with return = Some conf }
 
 module Fmt = struct
   open Format
@@ -114,7 +120,7 @@ module Fmt = struct
       fmt params
 
   let pp_params_as_args fmt (args : (string * 'a) list) =
-    let args = args >>| fst in
+    let args = List.map fst args in
     pp_print_list
       ~pp_sep:(fun fmt () -> pp_print_string fmt ", ")
       pp_print_string fmt args
@@ -142,14 +148,14 @@ end
 let pp = Fmt.pp
 
 module Parser : sig
-  val from_file : string -> vuln_conf list Result.t
+  val from_file : string -> (vuln_conf list, [> `Msg of string ]) Result.t
 end = struct
   module Json = Yojson.Basic
   module Util = Yojson.Basic.Util
   open Format
   open Syntax.Result
 
-  let parse_vuln_type ?file (ty : Json.t) : vuln_type Result.t =
+  let parse_vuln_type ?file (ty : Json.t) =
     match Util.to_string ty with
     | "command-injection" -> Ok Cmd_injection
     | "code-injection" -> Ok Code_injection
@@ -157,9 +163,10 @@ end = struct
     | "prototype-pollution" -> Ok Proto_pollution
     | _ ->
       Error
-        (asprintf {|%a: unknown type "%a"|}
-           (pp_print_option pp_print_string)
-           file Json.pp ty )
+        (`Msg
+          (asprintf {|%a: unknown type "%a"|}
+             (pp_print_option pp_print_string)
+             file Json.pp ty ) )
 
   let parse_param_type ?file (ty : string) : param_type =
     match String.trim ty with
@@ -184,19 +191,19 @@ end = struct
     | `String ty -> parse_param_type ?file ty
     | `Assoc obj as assoc -> (
       match Util.member "_union" assoc with
-      | `Null -> Object (obj >>| fun (k, v) -> (k, parse_param ?file v))
-      | `List tys -> Union (tys >>| parse_param ?file)
+      | `Null -> Object (List.map (fun (k, v) -> (k, parse_param ?file v)) obj)
+      | `List tys -> Union (List.map (parse_param ?file) tys)
       | _ ->
         (* should not happen *)
         assert false )
-    | `List array_ -> Array (array_ >>| parse_param ?file)
+    | `List array_ -> Array (List.map (parse_param ?file) array_)
     | _ ->
       printf {|%a: unknown param "%a"|}
         (pp_print_option pp_print_string)
         file Json.pp param;
       assert false
 
-  let rec from_json ?file (assoc : Json.t) : vuln_conf Result.t =
+  let rec from_json ?file (assoc : Json.t) =
     let* ty = Util.member "vuln_type" assoc |> parse_vuln_type ?file in
     let source = Util.member "source" assoc |> Util.to_string in
     let source_lineno =
@@ -205,16 +212,20 @@ end = struct
     let sink = Util.member "sink" assoc |> Util.to_string in
     let sink_lineno = Util.(member "sink_lineno" assoc |> to_option to_int) in
     let tainted_params =
-      Util.member "tainted_params" assoc |> Util.to_list >>| Util.to_string
+      Util.member "tainted_params" assoc
+      |> Util.to_list |> List.map Util.to_string
     in
     let params =
-      Util.member "params_types" assoc |> Util.to_assoc >>| fun (k, v) ->
-      (k, parse_param ?file v)
+      Util.member "params_types" assoc
+      |> Util.to_assoc
+      |> List.map (fun (k, v) -> (k, parse_param ?file v))
     in
     let* return =
       match Util.member "return" assoc with
       | `Null -> Ok None
-      | tree -> from_json ?file tree |> Result.map Option.some
+      | tree ->
+        let* tree = from_json ?file tree in
+        Ok (Some tree)
     in
     Ok
       { ty
@@ -227,7 +238,7 @@ end = struct
       ; return
       }
 
-  let from_file fname : vuln_conf list Result.t =
+  let from_file fname =
     let json = Json.from_file ~fname fname in
     Logs.debug (fun m -> m "json of %s:@.%a" fname Json.pp json);
     Util.to_list json |> list_map (from_json ~file:fname)
