@@ -17,7 +17,7 @@ let write_test ~file module_data vuln =
     Vuln.pp vuln
 
 let run file config output =
-  let* vulns = Vuln.Parser.from_file config in
+  let* vulns = Vuln_parser.from_file config in
   let* module_data = OS.File.read (Fpath.v file) in
   List.iteri
     (fun i vuln ->
