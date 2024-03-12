@@ -1,5 +1,0 @@
-(cram
- (deps
-  %{bin:instrumentation2}
-  vfunretbyexport.js
-  vfunretbyexport.json))
