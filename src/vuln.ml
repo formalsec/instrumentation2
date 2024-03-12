@@ -33,6 +33,23 @@ type vuln_conf =
 
 and cont = Return of vuln_conf
 
+let template0 : ('a, Format.formatter, unit) format =
+  "let esl_symbolic = require(\"esl_symbolic\");@\n\
+   esl_symbolic.sealProperties(Object.prototype);@\n\
+   // Vuln: %a@\n\
+   %a"
+
+let template1 : ('a, Format.formatter, unit) format =
+  "let esl_symbolic = require(\"esl_symbolic\");@\n\
+   esl_symbolic.sealProperties(Object.prototype);@\n\
+   // Vuln: %a@\n\
+   %a@\n\
+   console.log(({}).toString);"
+
+let get_template = function
+  | Cmd_injection | Code_injection | Path_traversal -> template0
+  | Proto_pollution -> template1
+
 let fresh_str =
   let id = ref 0 in
   fun () ->
@@ -133,22 +150,19 @@ module Fmt = struct
 
   let normalize = String.map (fun c -> match c with '.' | ' ' -> '_' | _ -> c)
 
-  let pp fmt (vuln : vuln_conf) =
-    fprintf fmt "// Vuln: %a@\n" pp_vuln_type vuln.ty;
-    let rec aux fmt vuln =
-      fprintf fmt "%a;@\n" pp_params_as_decl vuln.params;
-      match vuln.cont with
-      | None -> fprintf fmt "%s(%a);" vuln.source pp_params_as_args vuln.params
+  let pp fmt (v : vuln_conf) =
+    let rec pp_aux fmt { source; params; cont; _ } =
+      fprintf fmt "%a;@\n" pp_params_as_decl params;
+      match cont with
+      | None -> fprintf fmt "%s(%a);" source pp_params_as_args params
       | Some (Return r) ->
-        let source = asprintf "ret_%s" (normalize vuln.source) in
-        fprintf fmt "var %s = %s(%a);@\n" source vuln.source pp_params_as_args
-          vuln.params;
-        aux fmt { r with source = asprintf "%s%s" source r.source }
+        let var_aux = "ret_" ^ (normalize source) in
+        fprintf fmt "var %s = %s(%a);@\n" var_aux source pp_params_as_args
+          params;
+        pp_aux fmt { r with source = var_aux ^ r.source }
     in
-    aux fmt vuln;
-    match vuln.ty with
-    | Proto_pollution -> fprintf fmt "@\nconsole.log(({}).toString);"
-    | _ -> ()
+    let template = get_template v.ty in
+    fprintf fmt template pp_vuln_type v.ty pp_aux v
 end
 
 let pp = Fmt.pp
