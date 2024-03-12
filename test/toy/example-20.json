@@ -1,13 +1,13 @@
 [
   {
     "vuln_type": "code-injection",
-    "source": "module.exports",
+    "source": "f",
     "sink": "",
     "tainted_params": [ "x" ],
     "params_types": { "x": "string" },
     "sequence" : {
       "vuln_type": "code-injection",
-      "source": "module.exports.ev",
+      "source": "eval_target",
       "sink": "eval",
       "tainted_params": [],
       "params_types": {}
