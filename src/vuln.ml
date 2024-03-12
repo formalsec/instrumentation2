@@ -31,7 +31,9 @@ type vuln_conf =
   ; cont : cont option
   }
 
-and cont = Return of vuln_conf
+and cont =
+  | Return of vuln_conf
+  | Sequence of vuln_conf
 
 let template0 : ('a, Format.formatter, unit) format =
   "let esl_symbolic = require(\"esl_symbolic\");@\n\
@@ -85,10 +87,14 @@ let rec unroll (vuln : vuln_conf) : vuln_conf list =
   in
   match vuln.cont with
   | None -> cs
-  | Some (Return r) ->
-    let* conf = unroll r in
+  | Some (Return cont) ->
+    let* conf = unroll cont in
     let+ c = cs in
     { c with cont = Some (Return conf) }
+  | Some (Sequence cont) ->
+    let* conf = unroll cont in
+    let+ c = cs in
+    { c with cont = Some (Sequence conf) }
 
 module Fmt = struct
   open Format
@@ -152,14 +158,18 @@ module Fmt = struct
 
   let pp fmt (v : vuln_conf) =
     let rec pp_aux fmt { source; params; cont; _ } =
-      fprintf fmt "%a;@\n" pp_params_as_decl params;
+      if List.length params > 0 then
+        fprintf fmt "%a;@\n" pp_params_as_decl params;
       match cont with
       | None -> fprintf fmt "%s(%a);" source pp_params_as_args params
-      | Some (Return r) ->
-        let var_aux = "ret_" ^ (normalize source) in
+      | Some (Return ret) ->
+        let var_aux = "ret_" ^ normalize source in
         fprintf fmt "var %s = %s(%a);@\n" var_aux source pp_params_as_args
           params;
-        pp_aux fmt { r with source = var_aux ^ r.source }
+        pp_aux fmt { ret with source = var_aux ^ ret.source }
+      | Some (Sequence cont) ->
+        fprintf fmt "%s(%a);@\n" source pp_params_as_args params;
+        pp_aux fmt cont
     in
     let template = get_template v.ty in
     fprintf fmt template pp_vuln_type v.ty pp_aux v

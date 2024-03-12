@@ -52,3 +52,23 @@ Test toy examples:
   var ret_module_exports_Obj = module.exports.Obj(source);
   let obj = { cond: esl_symbolic.number("cond") };
   ret_module_exports_Obj.f(obj);
+  $ instrumentation2 toy/example-20.js toy/example-20.json -o -
+  Genrating -
+  // testing taint from parameter to eval function call
+  // multi scope function using this
+  
+  module.exports = function f(x) {
+    this.input = x;
+  
+    f.prototype.ev = function() {
+      let self = this;
+      eval(self.input);
+    }
+  }
+  
+  let esl_symbolic = require("esl_symbolic");
+  esl_symbolic.sealProperties(Object.prototype);
+  // Vuln: code-injection
+  let x = esl_symbolic.string("x");
+  module.exports(x);
+  module.exports.ev();

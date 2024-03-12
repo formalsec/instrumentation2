@@ -70,8 +70,14 @@ let rec from_json ?file (assoc : Json.t) =
     |> List.map (fun (k, v) -> (k, parse_param ?file v))
   in
   let* cont =
+    (* Can only have one type of continuation at a time *)
     match Util.member "return" assoc with
-    | `Null -> Ok None
+    | `Null -> (
+      match Util.member "sequence" assoc with
+      | `Null -> Ok None
+      | tree ->
+        let+ tree = from_json ?file tree in
+        Some (Sequence tree) )
     | tree ->
       let+ tree = from_json ?file tree in
       Some (Return tree)
