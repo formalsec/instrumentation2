@@ -28,6 +28,10 @@ setup.log
 # Local OPAM switch
 _opam/
 
+# Instrumentation
+_coverage/
+*.coverage
+
 # Project trash
 ecma-out/*
 symbolic_test*.js

@@ -1,4 +1,6 @@
 (executable
  (public_name instrumentation2)
  (name main)
- (libraries cmdliner bos bos.setup yojson))
+ (libraries cmdliner bos bos.setup yojson)
+ (instrumentation
+  (backend bisect_ppx)))
