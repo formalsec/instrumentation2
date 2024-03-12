@@ -22,6 +22,7 @@
   dune
   (cmdliner (>= 1.2.0))
   (yojson (>= 2.1.2))
-  (bos (>= 0.2.1)))
+  (bos (>= 0.2.1))
+  (bisect_ppx (and :with-test (>= 2.5.0))))
  (tags
   (javascript nodejs exploit vulnerability)))
