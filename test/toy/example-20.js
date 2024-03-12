@@ -1,11 +1,9 @@
-// testing taint from parameter to eval function call
-// multi scope function using this
+var target = "";
 
-module.exports = function f(x) {
-  this.input = x;
+function f(x) {
+  target = x;
+}
 
-  f.prototype.ev = function() {
-    let self = this;
-    eval(self.input);
-  }
+function eval_target() {
+  return eval(target);
 }

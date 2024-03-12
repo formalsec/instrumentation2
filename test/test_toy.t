@@ -54,21 +54,19 @@ Test toy examples:
   ret_module_exports_Obj.f(obj);
   $ instrumentation2 toy/example-20.js toy/example-20.json -o -
   Genrating -
-  // testing taint from parameter to eval function call
-  // multi scope function using this
+  var target = "";
   
-  module.exports = function f(x) {
-    this.input = x;
+  function f(x) {
+    target = x;
+  }
   
-    f.prototype.ev = function() {
-      let self = this;
-      eval(self.input);
-    }
+  function eval_target() {
+    return eval(target);
   }
   
   let esl_symbolic = require("esl_symbolic");
   esl_symbolic.sealProperties(Object.prototype);
   // Vuln: code-injection
   let x = esl_symbolic.string("x");
-  module.exports(x);
-  module.exports.ev();
+  f(x);
+  eval_target();
