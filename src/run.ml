@@ -3,9 +3,6 @@ open Syntax.Result
 module Json = Yojson.Basic
 module Util = Yojson.Basic.Util
 
-let esl_sym = {|let esl_symbolic = require("esl_symbolic")|}
-let seal_prop = {|esl_symbolic.sealProperties(Object.prototype)|}
-
 let get_test_name prefix (i, j) =
   match prefix with
   | "-" -> Fpath.v "-"
@@ -13,8 +10,7 @@ let get_test_name prefix (i, j) =
 
 let write_test ~file module_data vuln =
   Format.eprintf "Genrating %a@." Fpath.pp file;
-  OS.File.writef file "%s@\n%s;@\n%s;@\n%a@." module_data esl_sym seal_prop
-    Vuln.pp vuln
+  OS.File.writef file "%s@\n%a@." module_data Vuln.pp vuln
 
 let run file config output =
   let* vulns = Vuln_parser.from_file config in
