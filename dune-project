@@ -15,8 +15,8 @@
 
 (package
  (name instrumentation2)
- (synopsis "instrumentation2")
- (description "instrumentation2")
+ (synopsis "Instrumentation2")
+ (description "Instrumentation2")
  (depends
   ocaml
   dune
