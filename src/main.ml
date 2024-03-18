@@ -1,4 +1,13 @@
+open I2
 open Cmdliner
+
+let main debug file config output =
+  if debug then Logs.set_level (Some Debug);
+  match Run.run file config output with
+  | Ok _n -> 0
+  | Error (`Msg msg) ->
+    Format.eprintf "error: %s@." msg;
+    1
 
 let debug =
   let doc = "debug mode" in
@@ -24,6 +33,6 @@ let cmd =
     ]
   in
   let info = Cmd.info "instrumentation2" ~version:"%%VERSION%%" ~doc ~man in
-  Cmd.v info Term.(const Run.main $ debug $ file $ config $ output)
+  Cmd.v info Term.(const main $ debug $ file $ config $ output)
 
 let () = exit @@ Cmd.eval' cmd

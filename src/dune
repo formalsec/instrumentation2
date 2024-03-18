@@ -1,6 +1,13 @@
+(library
+ (public_name instrumentation2)
+ (name i2)
+ (modules run syntax vuln vuln_parser)
+ (libraries yojson bos bos.setup))
+
 (executable
  (public_name instrumentation2)
  (name main)
- (libraries cmdliner bos bos.setup yojson)
+ (modules main)
+ (libraries cmdliner i2)
  (instrumentation
   (backend bisect_ppx)))

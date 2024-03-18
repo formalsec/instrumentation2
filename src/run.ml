@@ -12,26 +12,22 @@ let write_test ~file module_data vuln =
   Format.eprintf "Genrating %a@." Fpath.pp file;
   OS.File.writef file "%s@\n%a@." module_data Vuln.pp vuln
 
+(** [run file config output] creates symbolic tests [file] from [config] *)
 let run file config output =
   let* vulns = Vuln_parser.from_file config in
-  let* module_data = OS.File.read (Fpath.v file) in
-  List.iteri
+  let+ module_data = OS.File.read (Fpath.v file) in
+  List.mapi
     (fun i vuln ->
       let confs = Vuln.unroll vuln in
-      List.iteri
+      List.mapi
         (fun j conf ->
           let file = get_test_name output (i, j) in
-          match write_test ~file module_data conf with
-          | Ok () -> ()
-          | Error (`Msg msg) -> failwith msg )
+          begin
+            match write_test ~file module_data conf with
+            | Ok () -> ()
+            | Error (`Msg msg) -> failwith msg
+          end;
+          file )
         confs )
-    vulns;
-  Ok 0
-
-let main debug file config output =
-  if debug then Logs.set_level (Some Debug);
-  match run file config output with
-  | Ok n -> n
-  | Error (`Msg msg) ->
-    Format.eprintf "error: %s@." msg;
-    1
+    vulns
+  |> List.concat
