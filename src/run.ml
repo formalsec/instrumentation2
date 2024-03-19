@@ -13,7 +13,7 @@ let write_test ~file module_data vuln =
   OS.File.writef file "%s@\n%a@." module_data Vuln.pp vuln
 
 (** [run file config output] creates symbolic tests [file] from [config] *)
-let run file config output =
+let run ~file ~config ~output =
   let* vulns = Vuln_parser.from_file config in
   let+ module_data = OS.File.read (Fpath.v file) in
   List.mapi

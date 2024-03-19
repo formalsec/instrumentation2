@@ -3,7 +3,7 @@ open Cmdliner
 
 let main debug file config output =
   if debug then Logs.set_level (Some Debug);
-  match Run.run file config output with
+  match Run.run ~file ~config ~output with
   | Ok _n -> 0
   | Error (`Msg msg) ->
     Format.eprintf "error: %s@." msg;
