@@ -13,21 +13,32 @@ let write_test ~file module_data vuln =
   OS.File.writef file "%s@\n%a@." module_data Vuln.pp vuln
 
 (** [run file config output] creates symbolic tests [file] from [config] *)
-let run ~file ~config ~output =
-  let* vulns = Vuln_parser.from_file config in
-  let+ module_data = OS.File.read (Fpath.v file) in
+let run ?file ~config ~output () =
+  let+ vulns = Vuln_parser.from_file config in
   List.mapi
     (fun i vuln ->
       let confs = Vuln.unroll vuln in
       List.mapi
         (fun j conf ->
-          let file = get_test_name output (i, j) in
+          let output_file = get_test_name output (i, j) in
+          let filename =
+            match file with
+            | Some f -> f
+            | None ->
+              let filename =
+                match conf.Vuln.filename with
+                | Some f -> f
+                | None -> assert false
+              in
+              Filename.(concat (dirname config) filename)
+          in
+          let module_data = In_channel.(with_open_text filename input_all) in
           begin
-            match write_test ~file module_data conf with
+            match write_test ~file:output_file module_data conf with
             | Ok () -> ()
             | Error (`Msg msg) -> failwith msg
           end;
-          file )
+          output_file )
         confs )
     vulns
   |> List.concat

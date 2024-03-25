@@ -1,5 +1,5 @@
 Test unit:
-  $ instrumentation2 -o - unit/identity.js unit/any.json
+  $ instrumentation2 -o - unit/any.json unit/identity.js
   Genrating -
   module.exports = function identity(some_arg) {
     return some_arg
@@ -10,7 +10,7 @@ Test unit:
   // Vuln: command-injection
   let some_arg = esl_symbolic.any("some_arg");
   module.exports(some_arg);
-  $ instrumentation2 -o - unit/identity.js unit/array.json
+  $ instrumentation2 -o - unit/array.json unit/identity.js
   Genrating -
   module.exports = function identity(some_arg) {
     return some_arg
@@ -21,7 +21,7 @@ Test unit:
   // Vuln: command-injection
   let some_arg = [ esl_symbolic.string("some_arg0") ];
   module.exports(some_arg);
-  $ instrumentation2 -o - unit/identity.js unit/array2.json
+  $ instrumentation2 -o - unit/array2.json unit/identity.js
   Genrating -
   module.exports = function identity(some_arg) {
     return some_arg
@@ -33,7 +33,7 @@ Test unit:
   let some_arg =
     [ esl_symbolic.string("some_arg0"), esl_symbolic.boolean("some_arg1"), esl_symbolic.number("some_arg2") ];
   module.exports(some_arg);
-  $ instrumentation2 -o - unit/identity.js unit/bool.json
+  $ instrumentation2 -o - unit/bool.json unit/identity.js
   Genrating -
   module.exports = function identity(some_arg) {
     return some_arg
@@ -44,7 +44,7 @@ Test unit:
   // Vuln: command-injection
   let some_arg = esl_symbolic.boolean("some_arg");
   module.exports(some_arg);
-  $ instrumentation2 -o - unit/identity.js unit/function.json
+  $ instrumentation2 -o - unit/function.json unit/identity.js
   Genrating -
   module.exports = function identity(some_arg) {
     return some_arg
@@ -55,7 +55,7 @@ Test unit:
   // Vuln: command-injection
   let some_arg = esl_symbolic.function("some_arg");
   module.exports(some_arg);
-  $ instrumentation2 -o - unit/identity.js unit/lazy_object.json
+  $ instrumentation2 -o - unit/lazy_object.json unit/identity.js
   Genrating -
   module.exports = function identity(some_arg) {
     return some_arg
@@ -66,7 +66,7 @@ Test unit:
   // Vuln: path-traversal
   let some_arg = esl_symbolic.lazy_object();
   module.exports(some_arg);
-  $ instrumentation2 -o - unit/identity.js unit/number.json
+  $ instrumentation2 -o - unit/number.json unit/identity.js
   Genrating -
   module.exports = function identity(some_arg) {
     return some_arg
@@ -77,7 +77,7 @@ Test unit:
   // Vuln: command-injection
   let some_arg = esl_symbolic.number("some_arg");
   module.exports(some_arg);
-  $ instrumentation2 -o - unit/identity.js unit/object.json
+  $ instrumentation2 -o - unit/object.json unit/identity.js
   Genrating -
   module.exports = function identity(some_arg) {
     return some_arg
@@ -88,7 +88,7 @@ Test unit:
   // Vuln: command-injection
   let some_arg = {  };
   module.exports(some_arg);
-  $ instrumentation2 -o - unit/identity.js unit/polluted_object2.json
+  $ instrumentation2 -o - unit/polluted_object2.json unit/identity.js
   Genrating -
   module.exports = function identity(some_arg) {
     return some_arg
@@ -100,7 +100,7 @@ Test unit:
   let some_arg = esl_symbolic.polluted_object(2);
   module.exports(some_arg);
   console.log(({}).toString);
-  $ instrumentation2 -o - unit/identity.js unit/polluted_object3.json
+  $ instrumentation2 -o - unit/polluted_object3.json unit/identity.js
   Genrating -
   module.exports = function identity(some_arg) {
     return some_arg
@@ -112,7 +112,7 @@ Test unit:
   let some_arg = esl_symbolic.polluted_object(3);
   module.exports(some_arg);
   console.log(({}).toString);
-  $ instrumentation2 -o - unit/identity.js unit/string.json
+  $ instrumentation2 -o - unit/string.json unit/identity.js
   Genrating -
   module.exports = function identity(some_arg) {
     return some_arg
@@ -123,7 +123,7 @@ Test unit:
   // Vuln: command-injection
   let some_arg = esl_symbolic.string("some_arg");
   module.exports(some_arg);
-  $ instrumentation2 -o - unit/identity.js unit/union.json
+  $ instrumentation2 -o - unit/union.json unit/identity.js
   Genrating -
   Genrating -
   Genrating -

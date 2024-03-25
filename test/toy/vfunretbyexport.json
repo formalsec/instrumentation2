@@ -1,5 +1,6 @@
 [
   {
+    "filename" : "./vfunretbyexport.js",
     "vuln_type" : "code-injection",
     "source" : "f1",
     "sink" : "anon",
