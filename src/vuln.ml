@@ -21,7 +21,8 @@ and object_type =
   ]
 
 type vuln_conf =
-  { ty : vuln_type
+  { filename : string option
+  ; ty : vuln_type
   ; source : string
   ; source_lineno : int option
   ; sink : string

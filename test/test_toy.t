@@ -1,5 +1,5 @@
 Test toy examples:
-  $ instrumentation2 toy/vfunexported.js toy/vfunexported.json -o -
+  $ instrumentation2 toy/vfunexported.json toy/vfunexported.js -o -
   Genrating -
   let exec = require('child_process').exec;
   
@@ -12,7 +12,7 @@ Test toy examples:
   // Vuln: command-injection
   let x = esl_symbolic.string("x");
   module.exports(x);
-  $ instrumentation2 toy/vfunretbyexport.js toy/vfunretbyexport.json -o -
+  $ instrumentation2 toy/vfunretbyexport.json -o -
   Genrating -
   function f1(a) {
     return function f2(b) {
@@ -29,7 +29,7 @@ Test toy examples:
   var ret_f1 = f1(a);
   let b = esl_symbolic.number("b");
   ret_f1(b);
-  $ instrumentation2 toy/vfunpropofexportedobj.js toy/vfunpropofexportedobj.json -o -
+  $ instrumentation2 toy/vfunpropofexportedobj.json toy/vfunpropofexportedobj.js -o -
   Genrating -
   let Obj = (function () {
     function Obj(source) { this.source = source; }
@@ -52,7 +52,7 @@ Test toy examples:
   var ret_module_exports_Obj = module.exports.Obj(source);
   let obj = { cond: esl_symbolic.number("cond") };
   ret_module_exports_Obj.f(obj);
-  $ instrumentation2 toy/example-20.js toy/example-20.json -o -
+  $ instrumentation2 toy/example-20.json toy/example-20.js -o -
   Genrating -
   var target = "";
   

@@ -55,6 +55,7 @@ let rec parse_param ?file (param : Json.t) : param_type =
     assert false
 
 let rec from_json ?file (assoc : Json.t) =
+  let filename = Util.(member "filename" assoc |> to_option to_string) in
   let* ty = Util.member "vuln_type" assoc |> parse_vuln_type ?file in
   let source = Util.member "source" assoc |> Util.to_string in
   let source_lineno = Util.(member "source_lineno" assoc |> to_option to_int) in
@@ -83,7 +84,8 @@ let rec from_json ?file (assoc : Json.t) =
       Some (Return tree)
   in
   Ok
-    { ty
+    { filename
+    ; ty
     ; source
     ; source_lineno
     ; sink

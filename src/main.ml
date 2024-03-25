@@ -1,9 +1,9 @@
 open I2
 open Cmdliner
 
-let main debug file config output =
+let main debug taint_summary file output =
   if debug then Logs.set_level (Some Debug);
-  match Run.run ~file ~config ~output with
+  match Run.run ?file ~config:taint_summary ~output () with
   | Ok _n -> 0
   | Error (`Msg msg) ->
     Format.eprintf "error: %s@." msg;
@@ -13,13 +13,13 @@ let debug =
   let doc = "debug mode" in
   Arg.(value & flag & info [ "debug" ] ~doc)
 
+let taint_summary =
+  let doc = "taint summary" in
+  Arg.(required & pos 0 (some non_dir_file) None & info [] ~docv:"SUMM" ~doc)
+
 let file =
   let doc = "normalized file" in
-  Arg.(required & pos 0 (some non_dir_file) None & info [] ~docv:"FILE" ~doc)
-
-let config =
-  let doc = "taint summary" in
-  Arg.(required & pos 1 (some non_dir_file) None & info [] ~docv:"SUMM" ~doc)
+  Arg.(value & pos 1 (some non_dir_file) None & info [] ~docv:"FILE" ~doc)
 
 let output =
   let doc = "output file" in
@@ -33,6 +33,6 @@ let cmd =
     ]
   in
   let info = Cmd.info "instrumentation2" ~version:"%%VERSION%%" ~doc ~man in
-  Cmd.v info Term.(const main $ debug $ file $ config $ output)
+  Cmd.v info Term.(const main $ debug $ taint_summary $ file  $ output)
 
 let () = exit @@ Cmd.eval' cmd
