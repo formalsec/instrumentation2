@@ -7,7 +7,7 @@ let main debug taint_summary file output =
   | Ok _n -> 0
   | Error err ->
     Format.eprintf "unexpected error: %a@." Result.pp err;
-    Result.int_of_error err
+    Result.to_code err
 
 let debug =
   let doc = "debug mode" in

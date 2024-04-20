@@ -10,10 +10,9 @@ let pp fmt = function
   | `Msg s -> Format.pp_print_string fmt s
   | `Unknown_vuln_type s ->
     Format.fprintf fmt "Unknown vulnerability type: %s" s
-  | `Malformed_json s ->
-    Format.fprintf fmt "Malformed summary: %s" s
+  | `Malformed_json s -> Format.fprintf fmt "Malformed summary: %s" s
 
-let int_of_error = function
+let to_code = function
   | `Msg _ -> 1
   | `Unknown_vuln_type _ -> 2
   | `Malformed_json _ -> 3
