@@ -5,9 +5,9 @@ let main debug taint_summary file output =
   if debug then Logs.set_level (Some Debug);
   match Run.run ?file ~config:taint_summary ~output () with
   | Ok _n -> 0
-  | Error (`Msg msg) ->
-    Format.eprintf "error: %s@." msg;
-    1
+  | Error err ->
+    Format.eprintf "unexpected error: %a@." Result.pp err;
+    Result.int_of_error err
 
 let debug =
   let doc = "debug mode" in

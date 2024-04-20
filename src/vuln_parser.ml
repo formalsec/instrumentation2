@@ -4,18 +4,13 @@ open Vuln
 open Format
 open Syntax.Result
 
-let parse_vuln_type ?file (ty : Json.t) =
+let parse_vuln_type ?file:_ (ty : Json.t) =
   match Util.to_string ty with
   | "command-injection" -> Ok Cmd_injection
   | "code-injection" -> Ok Code_injection
   | "path-traversal" -> Ok Path_traversal
   | "prototype-pollution" -> Ok Proto_pollution
-  | _ ->
-    Error
-      (`Msg
-        (asprintf {|%a: unknown type "%a"|}
-           (pp_print_option pp_print_string)
-           file Json.pp ty ) )
+  | _ -> Error (`Unknown_vuln_type (asprintf "%a" Json.pp ty))
 
 let parse_param_type ?file (ty : string) : param_type =
   match String.trim ty with
@@ -96,6 +91,8 @@ let rec from_json ?file (assoc : Json.t) =
     }
 
 let from_file fname =
-  let json = Json.from_file ~fname fname in
-  Logs.debug (fun m -> m "json of %s:@.%a" fname Json.pp json);
-  Util.to_list json |> list_map (from_json ~file:fname)
+  try
+    let json = Json.from_file ~fname fname in
+    Logs.debug (fun m -> m "json of %s:@.%a" fname Json.pp json);
+    Util.to_list json |> list_map (from_json ~file:fname)
+  with Yojson.Json_error msg -> Error (`Malformed_json msg)

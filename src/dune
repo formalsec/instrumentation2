@@ -1,7 +1,7 @@
 (library
  (public_name instrumentation2)
  (name i2)
- (modules run syntax vuln vuln_parser)
+ (modules run syntax vuln vuln_parser result)
  (libraries yojson bos bos.setup))
 
 (executable
