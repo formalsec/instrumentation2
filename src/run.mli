@@ -3,4 +3,4 @@ val run :
   -> config:string
   -> output:string
   -> unit
-  -> (Fpath.t list, Result.err) Result.t
+  -> (Fpath.t list, [> Result.err ]) Result.t
