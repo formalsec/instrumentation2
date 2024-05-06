@@ -1,5 +1,6 @@
 val run :
-     ?file:string
+     ?mode:int
+  -> ?file:string
   -> config:string
   -> output:string
   -> unit
