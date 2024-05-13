@@ -4,7 +4,7 @@ open Vuln
 open Format
 open Syntax.Result
 
-let parse_vuln_type ?file:_ (ty : Json.t) =
+let vuln_type (ty : Json.t) =
   match Util.to_string ty with
   | "command-injection" -> Ok Cmd_injection
   | "code-injection" -> Ok Code_injection
@@ -12,87 +12,104 @@ let parse_vuln_type ?file:_ (ty : Json.t) =
   | "prototype-pollution" -> Ok Proto_pollution
   | _ -> Error (`Unknown_vuln_type (asprintf "%a" Json.pp ty))
 
-let parse_param_type ?file (ty : string) : param_type =
+let param_type (ty : string) =
   match String.trim ty with
-  | "any" -> Any
-  | "number" -> Number
-  | "string" -> String
-  | "bool" | "boolean" -> Boolean
-  | "function" -> Function
-  | "array" -> Array [ String ]
-  | "object" -> Object (`Normal [])
-  | "polluted_object2" -> Object (`Polluted 2)
-  | "polluted_object3" -> Object (`Polluted 3)
-  | "lazy_object" -> Object `Lazy
-  | x ->
-    printf {|%a: unknown argument type "%s"@.|}
-      (pp_print_option pp_print_string)
-      file x;
-    assert false
+  | "any" -> Ok Any
+  | "number" -> Ok Number
+  | "string" -> Ok String
+  | "bool" | "boolean" -> Ok Boolean
+  | "function" -> Ok Function
+  | "array" -> Ok (Array [ String ])
+  | "object" -> Ok (Object (`Normal []))
+  | "polluted_object2" -> Ok (Object (`Polluted 2))
+  | "polluted_object3" -> Ok (Object (`Polluted 3))
+  | "lazy_object" -> Ok (Object `Lazy)
+  | x -> Error (`Unknown_param_type x)
 
-let rec parse_param ?file (param : Json.t) : param_type =
-  match param with
-  | `String ty -> parse_param_type ?file ty
-  | `Assoc obj as assoc -> (
-    match Util.member "_union" assoc with
+let rec param (json : Json.t) =
+  match json with
+  | `String ty -> param_type ty
+  | `Assoc obj -> (
+    match Util.member "_union" json with
     | `Null ->
-      let params = List.map (fun (k, v) -> (k, parse_param ?file v)) obj in
+      let+ params =
+        list_map
+          (fun (k, v) ->
+            let+ ty = param v in
+            (k, ty) )
+          obj
+      in
       Object (`Normal params)
-    | `List tys -> Union (List.map (parse_param ?file) tys)
+    | `List tys ->
+      let+ tys = list_map param tys in
+      Union tys
     | _ ->
       (* should not happen *)
       assert false )
-  | `List array_ -> Array (List.map (parse_param ?file) array_)
-  | _ ->
-    printf {|%a: unknown param "%a"|}
-      (pp_print_option pp_print_string)
-      file Json.pp param;
-    assert false
+  | `List arr ->
+    let+ arr = list_map param arr in
+    Array arr
+  | _ -> Error (`Unknown_param (asprintf "%a" Json.pp json))
 
-let rec from_json ?file (assoc : Json.t) =
-  let filename = Util.(member "filename" assoc |> to_option to_string) in
-  let* ty = Util.member "vuln_type" assoc |> parse_vuln_type ?file in
-  let source = Util.member "source" assoc |> Util.to_string in
-  let source_lineno = Util.(member "source_lineno" assoc |> to_option to_int) in
-  let sink = Util.member "sink" assoc |> Util.to_string in
-  let sink_lineno = Util.(member "sink_lineno" assoc |> to_option to_int) in
-  let tainted_params =
-    Util.member "tainted_params" assoc
-    |> Util.to_list |> List.map Util.to_string
+let string_opt = function `String str -> Some str | `Null | _ -> None
+let string = function `String str -> Ok str | _ -> Error `Expected_string
+let int_opt = function `Int i -> Some i | `Null | _ -> None
+let list = function `List lst -> Ok lst | _ -> Error `Expected_list
+let assoc = function `Assoc lst -> Ok lst | _ -> Error `Expected_assoc
+
+let rec from_json (json : Json.t) : (vuln_conf, [> Result.err ]) result =
+  let filename = string_opt (Util.member "filename" json) in
+  let* ty = vuln_type (Util.member "vuln_type" json) in
+  let* source = string (Util.member "source" json) in
+  let source_lineno = int_opt (Util.member "source_lineno" json) in
+  let* sink = string (Util.member "sink" json) in
+  let sink_lineno = int_opt (Util.member "sink_lineno" json) in
+  let* tainted_params =
+    let* tainted = list (Util.member "tainted_params" json) in
+    list_map string tainted
   in
-  let params =
-    Util.member "params_types" assoc
-    |> Util.to_assoc
-    |> List.map (fun (k, v) -> (k, parse_param ?file v))
+  let* params =
+    let* params = assoc (Util.member "params_types" json) in
+    list_map
+      (fun (k, v) ->
+        let+ ty = param v in
+        (k, ty) )
+      params
   in
-  let* cont =
+  let+ cont =
     (* Can only have one type of continuation at a time *)
-    match Util.member "return" assoc with
+    (* FIXME: To Allow return(s?) I made this horrible nested match *)
+    match Util.member "return" json with
     | `Null -> (
-      match Util.member "sequence" assoc with
-      | `Null -> Ok None
+      match Util.member "returns" json with
+      | `Null -> (
+        match Util.member "sequence" json with
+        | `Null -> Ok None
+        | tree ->
+          let+ tree = from_json tree in
+          Some (Sequence tree) )
       | tree ->
-        let+ tree = from_json ?file tree in
-        Some (Sequence tree) )
+        let+ tree = from_json tree in
+        Some (Return tree) )
     | tree ->
-      let+ tree = from_json ?file tree in
+      let+ tree = from_json tree in
       Some (Return tree)
   in
-  Ok
-    { filename
-    ; ty
-    ; source
-    ; source_lineno
-    ; sink
-    ; sink_lineno
-    ; tainted_params
-    ; params
-    ; cont
-    }
+  { filename
+  ; ty
+  ; source
+  ; source_lineno
+  ; sink
+  ; sink_lineno
+  ; tainted_params
+  ; params
+  ; cont
+  }
 
-let from_file fname =
+let from_file (fname : string) : (vuln_conf list, [> Result.err ]) Result.t =
   try
     let json = Json.from_file ~fname fname in
     Logs.debug (fun m -> m "json of %s:@.%a" fname Json.pp json);
-    Util.to_list json |> list_map (from_json ~file:fname)
+    let* vulns = list json in
+    list_map from_json vulns
   with Yojson.Json_error msg -> Error (`Malformed_json msg)

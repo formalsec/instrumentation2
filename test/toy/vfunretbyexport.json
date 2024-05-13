@@ -6,7 +6,7 @@
     "sink" : "anon",
     "tainted_params" : [ "a" ],
     "params_types" : { "a" : "string" },
-    "return" : {
+    "returns" : {
       "vuln_type" : "code-injection",
       "source" : "",
       "sink" : "eval",
