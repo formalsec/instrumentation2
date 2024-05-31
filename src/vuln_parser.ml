@@ -4,13 +4,12 @@ open Vuln
 open Format
 open Syntax.Result
 
-let vuln_type (ty : Json.t) =
-  match Util.to_string ty with
+let vuln_type = function
   | "command-injection" -> Ok Cmd_injection
   | "code-injection" -> Ok Code_injection
   | "path-traversal" -> Ok Path_traversal
   | "prototype-pollution" -> Ok Proto_pollution
-  | _ -> Error (`Unknown_vuln_type (asprintf "%a" Json.pp ty))
+  | str -> Error (`Unknown_vuln_type str)
 
 let param_type (ty : string) =
   match String.trim ty with
@@ -57,12 +56,19 @@ let int_opt = function `Int i -> Some i | `Null | _ -> None
 let list = function `List lst -> Ok lst | _ -> Error `Expected_list
 let assoc = function `Assoc lst -> Ok lst | _ -> Error `Expected_assoc
 
+let bind v f =
+  match v with
+  | None -> Ok None
+  | Some v ->
+    let+ v = f v in
+    Some v
+
 let rec from_json (json : Json.t) : (vuln_conf, [> Result.err ]) result =
   let filename = string_opt (Util.member "filename" json) in
-  let* ty = vuln_type (Util.member "vuln_type" json) in
-  let* source = string (Util.member "source" json) in
+  let* ty = bind (string_opt (Util.member "vuln_type" json)) vuln_type in
+  let source = string_opt (Util.member "source" json) in
   let source_lineno = int_opt (Util.member "source_lineno" json) in
-  let* sink = string (Util.member "sink" json) in
+  let sink = string_opt (Util.member "sink" json) in
   let sink_lineno = int_opt (Util.member "sink_lineno" json) in
   let* tainted_params =
     let* tainted = list (Util.member "tainted_params" json) in

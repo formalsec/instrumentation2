@@ -13,5 +13,17 @@
       "tainted_params" : [ "b" ],
       "params_types" : { "b" : "number" }
     }
+  },
+  {
+    "filename" : "./vfunretbyexport.js",
+    "vuln_type" : "code-injection",
+    "source" : "f1",
+    "tainted_params" : [ "a" ],
+    "params_types" : { "a" : "string" },
+    "returns" : {
+      "source" : "",
+      "tainted_params" : [ "b" ],
+      "params_types" : { "b" : "number" }
+    }
   }
 ]

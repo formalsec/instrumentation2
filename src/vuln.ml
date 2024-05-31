@@ -22,10 +22,10 @@ and object_type =
 
 type vuln_conf =
   { filename : string option
-  ; ty : vuln_type
-  ; source : string
+  ; ty : vuln_type option
+  ; source : string option
   ; source_lineno : int option
-  ; sink : string
+  ; sink : string option
   ; sink_lineno : int option
   ; tainted_params : string list
   ; params : (string * param_type) list
@@ -50,8 +50,8 @@ let template1 : ('a, Format.formatter, unit) format =
    console.log(({}).toString);"
 
 let get_template = function
-  | Cmd_injection | Code_injection | Path_traversal -> template0
-  | Proto_pollution -> template1
+  | Some (Cmd_injection | Code_injection | Path_traversal) -> template0
+  | Some Proto_pollution | None -> template1
 
 let fresh_str =
   let id = ref 0 in
@@ -101,10 +101,11 @@ module Fmt = struct
   open Format
 
   let pp_vuln_type fmt = function
-    | Cmd_injection -> fprintf fmt "command-injection"
-    | Code_injection -> fprintf fmt "code-injection"
-    | Path_traversal -> fprintf fmt "path-traversal"
-    | Proto_pollution -> fprintf fmt "prototype-pollution"
+    | Some Cmd_injection -> fprintf fmt "command-injection"
+    | Some Code_injection -> fprintf fmt "code-injection"
+    | Some Path_traversal -> fprintf fmt "path-traversal"
+    | Some Proto_pollution -> fprintf fmt "prototype-pollution"
+    | None -> ()
 
   let array_iter x f arr =
     List.iteri (fun i v -> f (x ^ string_of_int i, v)) arr
@@ -156,21 +157,28 @@ module Fmt = struct
       pp_print_string fmt args
 
   let normalize = String.map (fun c -> match c with '.' | ' ' -> '_' | _ -> c)
+  let ( let* ) v f = Option.bind v f
 
   let pp fmt (v : vuln_conf) =
     let rec pp_aux fmt { source; params; cont; _ } =
       if List.length params > 0 then
         fprintf fmt "%a;@\n" pp_params_as_decl params;
-      match cont with
-      | None -> fprintf fmt "%s(%a);" source pp_params_as_args params
-      | Some (Return ret) ->
+      match (cont, source) with
+      | None, Some source ->
+        fprintf fmt "%s(%a);" source pp_params_as_args params
+      | Some (Return ret), Some source ->
         let var_aux = "ret_" ^ normalize source in
         fprintf fmt "var %s = %s(%a);@\n" var_aux source pp_params_as_args
           params;
-        pp_aux fmt { ret with source = var_aux ^ ret.source }
-      | Some (Sequence cont) ->
+        let source =
+          let* ret_source = ret.source in
+          Some (var_aux ^ ret_source)
+        in
+        pp_aux fmt { ret with source }
+      | Some (Sequence cont), Some source ->
         fprintf fmt "%s(%a);@\n" source pp_params_as_args params;
         pp_aux fmt cont
+      | _, None -> assert false
     in
     let template = get_template v.ty in
     fprintf fmt template pp_vuln_type v.ty pp_aux v
