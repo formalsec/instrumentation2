@@ -154,3 +154,14 @@ Test unit:
   // Vuln: command-injection
   let some_arg = esl_symbolic.number("some_arg");
   module.exports(some_arg);
+  $ instrumentation2 -o - unit/dynamic.json unit/identity.js
+  Genrating -
+  module.exports = function identity(some_arg) {
+    return some_arg
+  }
+  
+  let esl_symbolic = require("esl_symbolic");
+  esl_symbolic.sealProperties(Object.prototype);
+  // Vuln: command-injection
+  let obj = { dp0: esl_symbolic.any("dp0") };
+  module.exports(obj);

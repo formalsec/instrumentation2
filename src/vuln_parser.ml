@@ -25,6 +25,14 @@ let param_type (ty : string) =
   | "lazy_object" -> Ok (Object `Lazy)
   | x -> Error (`Unknown_param_type x)
 
+let fix_dynamic_prop =
+  let counter = ref ~-1 in
+  function
+  | "*" ->
+    incr counter;
+    Format.sprintf "dp%d" !counter
+  | str -> str
+
 let rec param (json : Json.t) =
   match json with
   | `String ty -> param_type ty
@@ -35,7 +43,7 @@ let rec param (json : Json.t) =
         list_map
           (fun (k, v) ->
             let+ ty = param v in
-            (k, ty) )
+            (fix_dynamic_prop k, ty) )
           obj
       in
       Object (`Normal params)
@@ -79,7 +87,7 @@ let rec from_json (json : Json.t) : (vuln_conf, [> Result.err ]) result =
     list_map
       (fun (k, v) ->
         let+ ty = param v in
-        (k, ty) )
+        (fix_dynamic_prop k, ty) )
       params
   in
   let+ cont =
