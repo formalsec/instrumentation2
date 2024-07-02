@@ -4,6 +4,7 @@
  (modules
   run
   syntax
+  value
   vuln
   vuln_intf
   vuln_parser
