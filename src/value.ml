@@ -25,7 +25,9 @@ module Parser = struct
       | `Float x -> Map.add name (`Number x) map
       | `String x -> Map.add name (`String x) map
       | `Bool x -> Map.add name (`Bool x) map
-      | _ -> assert false
+      | _ ->
+        Format.eprintf "Value.Parser.from_json: unexpected value in witness@.";
+        map
     in
     let model = Util.member "model" json |> Util.to_assoc in
     List.fold_left add_binding Map.empty model
