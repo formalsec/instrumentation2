@@ -1,6 +1,6 @@
 module Json = Yojson.Basic
 module Util = Yojson.Basic.Util
-open Vuln
+open Vuln_intf
 open Format
 open Syntax.Result
 

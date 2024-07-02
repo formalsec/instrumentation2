@@ -10,7 +10,7 @@ let get_test_name prefix (i, j) =
 
 let write_test ~mode ~file module_data vuln =
   Format.eprintf "Genrating %a@." Fpath.pp file;
-  OS.File.writef ~mode file "%s@\n%a@." module_data Vuln.pp vuln
+  OS.File.writef ~mode file "%s@\n%a@." module_data Vuln_symbolic.pp vuln
 
 (** [run file config output] creates symbolic tests [file] from [config] *)
 let run ?(mode = 0o644) ?file ~config ~output () =
@@ -26,7 +26,7 @@ let run ?(mode = 0o644) ?file ~config ~output () =
             | Some f -> f
             | None ->
               let filename =
-                match conf.Vuln.filename with
+                match conf.Vuln_intf.filename with
                 | Some f -> f
                 | None -> assert false
               in
