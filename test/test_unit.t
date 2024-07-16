@@ -95,11 +95,10 @@ Test unit:
   }
   
   let esl_symbolic = require("esl_symbolic");
-  esl_symbolic.sealProperties(Object.prototype);
   // Vuln: prototype-pollution
   let some_arg = esl_symbolic.polluted_object(2);
   module.exports(some_arg);
-  console.log(({}).toString);
+  if (({}).toString == "polluted") { throw Error("I pollute."); }
   $ instrumentation2 symbolic -o - unit/polluted_object3.json unit/identity.js
   Genrating -
   module.exports = function identity(some_arg) {
@@ -107,11 +106,10 @@ Test unit:
   }
   
   let esl_symbolic = require("esl_symbolic");
-  esl_symbolic.sealProperties(Object.prototype);
   // Vuln: prototype-pollution
   let some_arg = esl_symbolic.polluted_object(3);
   module.exports(some_arg);
-  console.log(({}).toString);
+  if (({}).toString == "polluted") { throw Error("I pollute."); }
   $ instrumentation2 symbolic -o - unit/string.json unit/identity.js
   Genrating -
   module.exports = function identity(some_arg) {

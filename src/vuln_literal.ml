@@ -4,7 +4,9 @@ open Vuln_intf
 let template0 : ('a, Format.formatter, unit) format = "// Vuln: %a@\n%a"
 
 let template1 : ('a, Format.formatter, unit) format =
-  "// Vuln: %a@\n%a@\nconsole.log(({}).toString);"
+  "// Vuln: %a@\n\
+   %a@\n\
+   if (({}).toString == \"polluted\") { throw Error(\"I pollute.\"); }"
 
 let get_template = function
   | Some (Cmd_injection | Code_injection | Path_traversal) -> template0

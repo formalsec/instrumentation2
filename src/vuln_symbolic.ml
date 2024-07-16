@@ -9,10 +9,9 @@ let template0 : ('a, Format.formatter, unit) format =
 
 let template1 : ('a, Format.formatter, unit) format =
   "let esl_symbolic = require(\"esl_symbolic\");@\n\
-   esl_symbolic.sealProperties(Object.prototype);@\n\
    // Vuln: %a@\n\
    %a@\n\
-   console.log(({}).toString);"
+   if (({}).toString == \"polluted\") { throw Error(\"I pollute.\"); }"
 
 let get_template = function
   | Some (Cmd_injection | Code_injection | Path_traversal) -> template0
